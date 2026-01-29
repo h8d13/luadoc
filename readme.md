@@ -144,8 +144,6 @@ print('luadoc is awesome')
     ---- do the actual work using those definitions
     -- Raiser  -> Use errors of
     ---- handle what went wrong with more definitions
-
---########--
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:24`
