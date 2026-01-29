@@ -2,9 +2,11 @@
 
 --########--
 --HLPARSER--
---Examples
--- @cal:1!n
--- Defines a caller with 1 line of subject
+--Examples--
+--########--
+
+-- @set:1!n
+-- Defines a setter with 1 line of subject
 -- And a note callout
 print('luadoc is awesomne')
 
@@ -530,7 +532,7 @@ local function process_file(filepath)
     total_input = total_input + ln
 end
 
--- @cal:67 Render `records` into grouped markdown
+-- @cal:73 Render `records` into grouped markdown
 -- with blockquotes for text and fenced code blocks for subjects
 local function render_markdown()
     local out = {}
@@ -554,12 +556,18 @@ local function render_markdown()
 
             -- Render text lines: admonition or first-plain/rest-blockquote
             if r.adm then
-                w(fmt("> [!%s]\n", r.adm))
+                local first_text = true
                 for tline in gmatch(r.text, "[^\031]+") do
                     local tr = trim(tline)
-                    if tr ~= "" then w(fmt("> %s\n", tr)) end
+                    if tr ~= "" then
+                        if first_text then
+                            w(fmt("> [!%s]\n> %s\n\n", r.adm, tr))
+                            first_text = false
+                        else
+                            w(tr .. "\n\n")
+                        end
+                    end
                 end
-                w("\n")
             else
                 local first_text = true
                 for tline in gmatch(r.text, "[^\031]+") do
