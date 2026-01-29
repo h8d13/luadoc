@@ -1,24 +1,44 @@
 #!/usr/bin/env lua
 
+-- @set:9 Localize standard library functions
+-- bypasses metatable and global lookups in the hot loop
+local find   = string.find
+local sub    = string.sub
+local byte   = string.byte
+local match  = string.match
+local gmatch = string.gmatch
+local gsub   = string.gsub
+local fmt    = string.format
+local concat = table.concat
+local open   = io.open
+
 -- @set:7 Parse CLI args with defaults
 -- strip trailing slash, resolve absolute path via io.popen
 -- `US` separates multi-line text within record fields
 local SCAN_DIR = arg[1] or "."
 local OUTPUT   = arg[2] or "readme.md"
-SCAN_DIR = SCAN_DIR:gsub("/$", "")
+SCAN_DIR = gsub(SCAN_DIR, "/$", "")
 local p = io.popen('cd "' .. SCAN_DIR .. '" && pwd')
 SCAN_DIR = p:read("*l")
 p:close()
 local US = "\031"
 
--- @cal:3 Strip leading spaces and tabs from a string
+-- @cal:6 Strip leading spaces and tabs via byte scan
+-- returns original string when no trimming needed
 local function trim_lead(s)
-    return (s:gsub("^[ \t]+", ""))
+    local i = 1
+    while byte(s, i) == 32 or byte(s, i) == 9 do i = i + 1 end
+    if i == 1 then return s end
+    return sub(s, i)
 end
 
--- @cal:3 Strip trailing spaces and tabs from a string
+-- @cal:6 Strip trailing spaces and tabs via byte scan
+-- returns original string when no trimming needed
 local function trim_trail(s)
-    return (s:gsub("[ \t]+$", ""))
+    local i = #s
+    while i > 0 and (byte(s, i) == 32 or byte(s, i) == 9) do i = i - 1 end
+    if i == #s then return s end
+    return sub(s, 1, i)
 end
 
 -- @cal:3 Trim both ends via trim_lead and trim_trail
@@ -26,136 +46,149 @@ local function trim(s)
     return trim_trail(trim_lead(s))
 end
 
--- @ass:4 Test whether a line contains any documentation tag
+-- @ass:5 Test whether a line contains any documentation tag
+-- early `@` check short-circuits lines with no tags
 local function has_tag(line)
-    return line:find("@set", 1, true) or line:find("@ass", 1, true) or
-           line:find("@cal", 1, true) or line:find("@rai", 1, true)
+    if not find(line, "@", 1, true) then return nil end
+    return find(line, "@set", 1, true) or find(line, "@ass", 1, true) or
+           find(line, "@cal", 1, true) or find(line, "@rai", 1, true)
 end
 
 -- @ass:7 Classify a tagged line into SET, ASS, CAL, or RAI
 local function get_tag(line)
-    if     line:find("@set", 1, true) then return "SET"
-    elseif line:find("@ass", 1, true) then return "ASS"
-    elseif line:find("@cal", 1, true) then return "CAL"
-    elseif line:find("@rai", 1, true) then return "RAI"
+    if     find(line, "@set", 1, true) then return "SET"
+    elseif find(line, "@ass", 1, true) then return "ASS"
+    elseif find(line, "@cal", 1, true) then return "CAL"
+    elseif find(line, "@rai", 1, true) then return "RAI"
     end
 end
 
 -- @cal:5 Extract the subject line count from `@tag:N` syntax
 -- using pattern capture after the colon
 local function get_subject_count(text)
-    local n = text:match("@set:(%d+)") or text:match("@ass:(%d+)") or
-              text:match("@cal:(%d+)") or text:match("@rai:(%d+)")
+    local n = match(text, "@set:(%d+)") or match(text, "@ass:(%d+)") or
+              match(text, "@cal:(%d+)") or match(text, "@rai:(%d+)")
     return tonumber(n) or 0
 end
 
 -- @cal:9 Strip `@tag:N` and trailing digits from text
 -- rejoining prefix with remaining content
 local function strip_tag_num(text, tag)
-    local pos = text:find(tag .. ":", 1, true)
+    local pos = find(text, tag .. ":", 1, true)
     if not pos then return text end
-    local prefix = text:sub(1, pos - 1)
-    local rest = text:sub(pos + #tag + 1)
-    rest = rest:gsub("^%d+", "")
-    rest = rest:gsub("^ ", "", 1)
+    local prefix = sub(text, 1, pos - 1)
+    local rest = sub(text, pos + #tag + 1)
+    rest = gsub(rest, "^%d+", "")
+    rest = gsub(rest, "^ ", "", 1)
     return prefix .. rest
 end
 
--- @cal:17 Remove `@tag` or `@tag:N` syntax from comment text
+-- @set:1 Hoisted tag table avoids per-call allocation in strip_tags
+local TAGS = {"@set", "@ass", "@cal", "@rai"}
+
+-- @cal:16 Remove `@tag` or `@tag:N` syntax from comment text
 -- delegates to `strip_tag_num` for `:N` variants
 local function strip_tags(text)
-    local tags = {"@set", "@ass", "@cal", "@rai"}
-    for _, tag in ipairs(tags) do
-        if text:find(tag .. ":%d") then
+    for _, tag in ipairs(TAGS) do
+        if find(text, tag .. ":%d") then
             return strip_tag_num(text, tag)
         end
-        local spos = text:find(tag .. " ", 1, true)
+        local spos = find(text, tag .. " ", 1, true)
         if spos then
-            return text:sub(1, spos - 1) .. text:sub(spos + #tag + 1)
+            return sub(text, 1, spos - 1) .. sub(text, spos + #tag + 1)
         end
-        local bpos = text:find(tag, 1, true)
+        local bpos = find(text, tag, 1, true)
         if bpos then
-            return text:sub(1, bpos - 1) .. text:sub(bpos + #tag)
+            return sub(text, 1, bpos - 1) .. sub(text, bpos + #tag)
         end
     end
     return text
 end
 
--- @ass:12 Detect comment style from a source line
--- `none` skips early in next defs
+-- @ass:21 Detect comment style via byte-level prefix check
+-- skips leading whitespace without allocating a trimmed copy
 local function detect_style(line)
-    local tl = trim_lead(line)
-    if     tl:sub(1, 4) == "<!--" then return "html"
-    elseif tl:sub(1, 2) == "/*"   then return "cblock"
-    elseif tl:sub(1, 2) == "//"   then return "dslash"
-    elseif tl:sub(1, 1) == "#"    then return "hash"
-    elseif tl:sub(1, 3) == '"""'  then return "dquote"
-    elseif tl:sub(1, 3) == "'''"  then return "squote"
-    elseif tl:sub(1, 2) == "--"   then return "ddash"
-    else   return "none"
+    local i = 1
+    while byte(line, i) == 32 or byte(line, i) == 9 do i = i + 1 end
+    local b = byte(line, i)
+    if not b then return "none" end
+    if b == 60 then -- '<'
+        if sub(line, i, i + 3) == "<!--" then return "html" end
+    elseif b == 47 then -- '/'
+        local b2 = byte(line, i + 1)
+        if b2 == 42 then return "cblock" end
+        if b2 == 47 then return "dslash" end
+    elseif b == 35 then return "hash"
+    elseif b == 34 then -- '"'
+        if sub(line, i, i + 2) == '"""' then return "dquote" end
+    elseif b == 39 then -- "'"
+        if sub(line, i, i + 2) == "'''" then return "squote" end
+    elseif b == 45 then -- '-'
+        if byte(line, i + 1) == 45 then return "ddash" end
     end
+    return "none"
 end
 
 -- @cal Strip comment delimiters and extract inner text
 -- for all styles including block continuations
 local function strip_comment(line, style)
     if style == "hash" then
-        local sc = line:match("#(.*)") or ""
+        local sc = match(line, "#(.*)") or ""
         return trim_lead(sc)
 
     elseif style == "dslash" then
-        local sc = line:match("//(.*)") or ""
+        local sc = match(line, "//(.*)") or ""
         return trim_lead(sc)
 
     elseif style == "ddash" then
-        local sc = line:match("%-%-(.*)") or ""
+        local sc = match(line, "%-%-(.*)") or ""
         return trim_lead(sc)
 
     elseif style == "cblock" then
-        local sc = line:match("/%*(.*)") or ""
+        local sc = match(line, "/%*(.*)") or ""
         sc = trim_trail(sc)
-        if sc:sub(-2) == "*/" then sc = sc:sub(1, -3) end
+        if sub(sc, -2) == "*/" then sc = sub(sc, 1, -3) end
         return trim(sc)
 
     elseif style == "html" then
-        local sc = line:match("<!%-%-(.*)") or ""
+        local sc = match(line, "<!%-%-(.*)") or ""
         sc = trim_trail(sc)
-        if sc:sub(-3) == "-->" then sc = sc:sub(1, -4) end
+        if sub(sc, -3) == "-->" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
     elseif style == "cblock_cont" then
         local sc = trim_trail(line)
-        if sc:sub(-2) == "*/" then sc = sc:sub(1, -3) end
+        if sub(sc, -2) == "*/" then sc = sub(sc, 1, -3) end
         sc = trim_lead(sc)
-        if sc:sub(1, 1) == "*" then
-            sc = sc:sub(2)
+        if sub(sc, 1, 1) == "*" then
+            sc = sub(sc, 2)
             sc = trim_lead(sc)
         end
         return trim_trail(sc)
 
     elseif style == "html_cont" then
         local sc = trim_trail(line)
-        if sc:sub(-3) == "-->" then sc = sc:sub(1, -4) end
+        if sub(sc, -3) == "-->" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
     elseif style == "dquote" then
-        local sc = line:match('"""(.*)') or ""
+        local sc = match(line, '"""(.*)') or ""
         sc = trim_trail(sc)
-        if sc:sub(-3) == '"""' then sc = sc:sub(1, -4) end
+        if sub(sc, -3) == '"""' then sc = sub(sc, 1, -4) end
         return trim(sc)
 
     elseif style == "squote" then
-        local sc = line:match("'''(.*)") or ""
+        local sc = match(line, "'''(.*)") or ""
         sc = trim_trail(sc)
-        if sc:sub(-3) == "'''" then sc = sc:sub(1, -4) end
+        if sub(sc, -3) == "'''" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
     elseif style == "docstring_cont" then
         local sc = trim_trail(line)
-        if sc:sub(-3) == '"""' then
-            sc = sc:sub(1, -4)
-        elseif sc:sub(-3) == "'''" then
-            sc = sc:sub(1, -4)
+        if sub(sc, -3) == '"""' then
+            sc = sub(sc, 1, -4)
+        elseif sub(sc, -3) == "'''" then
+            sc = sub(sc, 1, -4)
         end
         return trim(sc)
     end
@@ -183,15 +216,15 @@ local shebang_map = {
 }
 
 local function get_lang(filepath)
-    local ext = filepath:match("%.([^%.]+)$")
+    local ext = match(filepath, "%.([^%.]+)$")
     if ext and ext_map[ext] then return ext_map[ext] end
-    local f = io.open(filepath, "r")
+    local f = open(filepath, "r")
     if f then
         local first = f:read("*l")
         f:close()
-        if first and first:sub(1, 3) == "#!/" then
+        if first and sub(first, 1, 3) == "#!/" then
             for _, pair in ipairs(shebang_map) do
-                if first:find(pair[1], 1, true) then
+                if find(first, pair[1], 1, true) then
                     return pair[2]
                 end
             end
@@ -202,13 +235,13 @@ end
 
 -- Records collected across all files
 local records = {}
+local total_input = 0
 
 -- @cal Walk one file as a line-by-line state machine
 -- extracting tagged comments into records table
 local function process_file(filepath)
     -- @set:12 Initialize per-file state machine variables
-    -- `get_lang` sets language via return value
-    -- records table collects output in-memory
+    -- `get_lang` returns language, `records` collects output in-memory
     local rel     = filepath
     local lang    = get_lang(filepath)
     local ln      = 0
@@ -267,10 +300,20 @@ local function process_file(filepath)
         end
     end
 
-    local f = io.open(filepath, "r")
+    -- @set:4 Bulk-read file into memory for single-syscall I/O
+    -- then scan for newlines in the hot loop
+    local f = open(filepath, "r")
     if not f then return end
+    local content = f:read("*a")
+    f:close()
 
-    for line in f:lines() do
+    local pos = 1
+    local clen = #content
+
+    while pos <= clen do
+        local nl = find(content, "\n", pos, true) or clen + 1
+        local line = sub(content, pos, nl - 1)
+        pos = nl + 1
         ln = ln + 1
 
         -- Subject line capture mode
@@ -287,7 +330,7 @@ local function process_file(filepath)
 
         -- Inside a C-style block comment with tag
         if state == "cblock" then
-            if line:find("*/", 1, true) then
+            if find(line, "*/", 1, true) then
                 local sc = strip_comment(line, "cblock_cont")
                 if sc ~= "" then text = text .. US .. sc end
                 emit()
@@ -300,7 +343,7 @@ local function process_file(filepath)
 
         -- Inside an HTML comment with tag
         if state == "html" then
-            if line:find("-->", 1, true) then
+            if find(line, "-->", 1, true) then
                 local sc = strip_comment(line, "html_cont")
                 if sc ~= "" then text = text .. US .. sc end
                 emit()
@@ -313,7 +356,7 @@ local function process_file(filepath)
 
         -- Scanning a block comment for a tag
         if state == "cblock_scan" then
-            if line:find("*/", 1, true) then
+            if find(line, "*/", 1, true) then
                 state = ""
             else
                 if has_tag(line) then
@@ -330,7 +373,7 @@ local function process_file(filepath)
 
         -- Scanning an HTML comment for a tag
         if state == "html_scan" then
-            if line:find("-->", 1, true) then
+            if find(line, "-->", 1, true) then
                 state = ""
             else
                 if has_tag(line) then
@@ -348,7 +391,7 @@ local function process_file(filepath)
         -- Inside a docstring with tag
         if state == "dquote" or state == "squote" then
             local close = (state == "dquote") and '"""' or "'''"
-            if line:find(close, 1, true) then
+            if find(line, close, 1, true) then
                 local sc = strip_comment(line, "docstring_cont")
                 if sc ~= "" then text = text .. US .. sc end
                 emit()
@@ -367,7 +410,7 @@ local function process_file(filepath)
             else
                 close = "'''"; promote = "squote"
             end
-            if line:find(close, 1, true) then
+            if find(line, close, 1, true) then
                 state = ""
             else
                 if has_tag(line) then
@@ -411,28 +454,28 @@ local function process_file(filepath)
             if style == "hash" or style == "dslash" or style == "ddash" then
                 state = style
             elseif style == "cblock" then
-                if line:find("*/", 1, true) then emit() else state = "cblock" end
+                if find(line, "*/", 1, true) then emit() else state = "cblock" end
             elseif style == "html" then
-                if line:find("-->", 1, true) then emit() else state = "html" end
+                if find(line, "-->", 1, true) then emit() else state = "html" end
             elseif style == "dquote" then
-                local rest = line:match('"""(.*)')
-                if rest and rest:find('"""', 1, true) then emit() else state = "dquote" end
+                local rest = match(line, '"""(.*)')
+                if rest and find(rest, '"""', 1, true) then emit() else state = "dquote" end
             elseif style == "squote" then
-                local rest = line:match("'''(.*)")
-                if rest and rest:find("'''", 1, true) then emit() else state = "squote" end
+                local rest = match(line, "'''(.*)")
+                if rest and find(rest, "'''", 1, true) then emit() else state = "squote" end
             end
 
         -- Untagged block comment start - scan for tags
         elseif style == "cblock" then
-            if not line:find("*/", 1, true) then state = "cblock_scan" end
+            if not find(line, "*/", 1, true) then state = "cblock_scan" end
         elseif style == "html" then
-            if not line:find("-->", 1, true) then state = "html_scan" end
+            if not find(line, "-->", 1, true) then state = "html_scan" end
         elseif style == "dquote" then
-            local rest = line:match('"""(.*)')
-            if not (rest and rest:find('"""', 1, true)) then state = "dquote_scan" end
+            local rest = match(line, '"""(.*)')
+            if not (rest and find(rest, '"""', 1, true)) then state = "dquote_scan" end
         elseif style == "squote" then
-            local rest = line:match("'''(.*)")
-            if not (rest and rest:find("'''", 1, true)) then state = "squote_scan" end
+            local rest = match(line, "'''(.*)")
+            if not (rest and find(rest, "'''", 1, true)) then state = "squote_scan" end
         end
 
         -- Begin subject capture if we're waiting and hit a code line
@@ -447,10 +490,10 @@ local function process_file(filepath)
         ::continue::
     end
 
-    f:close()
     emit()
     if cap_want > 0 then cap_want = 0 end
     flush_pending()
+    total_input = total_input + ln
 end
 
 -- @cal:52 Render intermediate records into grouped markdown
@@ -470,28 +513,28 @@ local function render_markdown()
         end
         if #entries == 0 then return end
 
-        w(string.format("## %s (%s)\n\n", title, label))
+        w(fmt("## %s (%s)\n\n", title, label))
 
         for _, r in ipairs(entries) do
-            w(string.format("### `%s`\n", r.loc))
+            w(fmt("### `%s`\n", r.loc))
 
             -- Render text lines (split on US, skip empty after trim)
-            for tline in r.text:gmatch("[^\031]+") do
+            for tline in gmatch(r.text, "[^\031]+") do
                 local tr = trim(tline)
                 if tr ~= "" then
-                    w(string.format("> %s\n\n", tr))
+                    w(fmt("> %s\n\n", tr))
                 end
             end
 
             -- Render subject code block
             if r.subj and r.subj ~= "" then
                 if r.lang and r.lang ~= "" and r.lang ~= "-" then
-                    w(string.format("```%s\n", r.lang))
+                    w(fmt("```%s\n", r.lang))
                 else
                     w("```\n")
                 end
                 -- Split on US, preserving empty segments for blank source lines
-                for sline in (r.subj .. "\031"):gmatch("(.-)\031") do
+                for sline in gmatch(r.subj .. "\031", "(.-)\031") do
                     w(sline .. "\n")
                 end
                 w("```\n")
@@ -505,7 +548,7 @@ local function render_markdown()
     render_section("CAL", "Callers", "@cal")
     render_section("RAI", "Raisers", "@rai")
 
-    return table.concat(out)
+    return concat(out)
 end
 
 -- @cal Entry point
@@ -513,13 +556,13 @@ local function main()
     -- @cal:17 Discover files containing documentation tags
     -- respect .gitignore patterns via grep --exclude-from
     local gi = ""
-    local gf = io.open(SCAN_DIR .. "/.gitignore", "r")
+    local gf = open(SCAN_DIR .. "/.gitignore", "r")
     if gf then
         gf:close()
         gi = "--exclude-from=" .. SCAN_DIR .. "/.gitignore"
     end
 
-    local cmd = string.format(
+    local cmd = fmt(
         'grep -rl -I --exclude-dir=.git %s -e "@set" -e "@ass" -e "@cal" -e "@rai" "%s" 2>/dev/null',
         gi, SCAN_DIR
     )
@@ -534,19 +577,19 @@ local function main()
     if #files == 0 then
         -- @rai:3 Handle missing tagged files
         -- with empty output and stderr warning
-        local f = io.open(OUTPUT, "w")
+        local f = open(OUTPUT, "w")
         f:write("# Autodocs\n\nNo tagged documentation found.\n")
         f:close()
-        io.stderr:write(string.format("autodocs: no tags found under %s\n", SCAN_DIR))
+        io.stderr:write(fmt("autodocs: no tags found under %s\n", SCAN_DIR))
         return
     end
 
-    local out_base = OUTPUT:match("([^/]+)$")
-    local out_base_escaped = out_base:gsub("(%W)", "%%%1")
+    local out_base = match(OUTPUT, "([^/]+)$")
+    local out_base_escaped = gsub(out_base, "(%W)", "%%%1")
 
     -- @cal:5 Process all discovered files into intermediate records
     for _, fp in ipairs(files) do
-        if not fp:match("/" .. out_base_escaped .. "$") then
+        if not match(fp, "/" .. out_base_escaped .. "$") then
             process_file(fp)
         end
     end
@@ -555,19 +598,21 @@ local function main()
     if #records == 0 then
         -- @rai:3 Handle extraction failure
         -- with empty output and stderr warning
-        local f = io.open(OUTPUT, "w")
+        local f = open(OUTPUT, "w")
         f:write("# Autodocs\n\nNo tagged documentation found.\n")
         f:close()
-        io.stderr:write(string.format("autodocs: tags found but no extractable docs under %s\n", SCAN_DIR))
+        io.stderr:write(fmt("autodocs: tags found but no extractable docs under %s\n", SCAN_DIR))
         return
     end
 
-    -- @cal:5 Render documentation and write output file
+    -- @cal:6 Render documentation, write output, and report ratio
     local markdown = render_markdown()
-    local f = io.open(OUTPUT, "w")
+    local f = open(OUTPUT, "w")
     f:write(markdown)
     f:close()
-    io.stderr:write(string.format("autodocs: wrote %s\n", OUTPUT))
+    local ol = select(2, gsub(markdown, "\n", "")) + 1
+    io.stderr:write(fmt("autodocs: wrote %s (%d/%d = %d%%)\n",
+        OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
 end
 
 -- @cal:1 Entry point
