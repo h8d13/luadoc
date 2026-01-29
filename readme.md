@@ -38,8 +38,6 @@ p:close()
     local capture = 0
     local subj    = ""
     local pending = nil
-
-    -- @cal:21 Emit a documentation record or defer for subject capture
 ```
 
 ## Asserts (@ass)
@@ -194,6 +192,33 @@ end
 
 > extracting tagged comments into records table
 
+
+### `/home/hadean/Desktop/Bin/autodocs.lua:225`
+> Emit a documentation record or defer for subject capture
+
+```lua
+    local function emit()
+        if tag ~= "" and text ~= "" then
+            local tr = trim(text)
+            if tr ~= "" then
+                if nsubj > 0 then
+                    local lang_f = lang
+                    if lang_f == "" then lang_f = "-" end
+                    pending = {
+                        tag  = tag,
+                        loc  = rel .. ":" .. start,
+                        text = tr,
+                        lang = lang_f,
+                    }
+                    cap_want = nsubj
+                    subj = ""
+                else
+                    records[#records + 1] = {
+                        tag  = tag,
+                        loc  = rel .. ":" .. start,
+                        text = tr,
+                        lang = lang,
+```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:259`
 > Flush deferred record with captured subject lines

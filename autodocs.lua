@@ -206,7 +206,7 @@ local records = {}
 -- @cal Walk one file as a line-by-line state machine
 -- extracting tagged comments into records table
 local function process_file(filepath)
-    -- @set:14 Initialize per-file state machine variables
+    -- @set:12 Initialize per-file state machine variables
     -- `get_lang` sets language via return value
     -- records table collects output in-memory
     local rel     = filepath
