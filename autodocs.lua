@@ -13,6 +13,7 @@ local concat = table.concat
 local open   = io.open
 
 -- @cal:3 Shell-escape a string for safe interpolation into io.popen
+-- prevents breakage from paths containing ", $(), or backticks
 local function shell_quote(s)
     return "'" .. gsub(s, "'", "'\\''") .. "'"
 end
@@ -221,6 +222,7 @@ local shebang_map = {
     {"perl", "perl"}, {"lua", "lua"}, {"php", "php"}, {"sh", "sh"},
 }
 
+-- accepts first_line from caller to avoid reopening the file
 local function get_lang(filepath, first_line)
     local ext = match(filepath, "%.([^%.]+)$")
     if ext and ext_map[ext] then return ext_map[ext] end
@@ -241,8 +243,8 @@ local total_input = 0
 -- @cal Walk one file as a line-by-line state machine
 -- extracting tagged comments into records table
 local function process_file(filepath)
-    -- @set:4 Bulk-read file into memory for single-syscall I/O
-    -- first line is extracted for shebang detection without reopening
+    -- @set:4 Bulk-read file first so get_lang reuses the buffer
+    -- avoids a second open+read just for shebang detection
     local f = open(filepath, "r")
     if not f then return end
     local content = f:read("*a")
@@ -265,6 +267,7 @@ local function process_file(filepath)
     local pending = nil
 
     -- @cal:30 Emit a documentation record or defer for subject capture
+    -- lang is passed through as-is, empty string means no fence label
     local function emit()
         if tag ~= "" and text ~= "" then
             local tr = trim(text)
@@ -606,6 +609,7 @@ local function main()
     end
 
     -- @cal:7 Render documentation, write output, and report ratio
+    -- wraps across two lines so count must include the continuation
     local markdown = render_markdown()
     local f = open(OUTPUT, "w")
     f:write(markdown)
@@ -618,23 +622,4 @@ end
 -- @cal:1 Entry point
 main()
 
--- Fixes applied during review:
---
--- 1. Tag count bug: @cal:6 was @cal:7 — the io.stderr:write call wraps
---    across two lines but only 6 were captured, truncating the code block
---    in the generated readme.  Changed to @cal:7.
---
--- 2. Double file open: get_lang opened every file to check for a shebang,
---    then process_file opened the same file again for bulk reading.  Now
---    process_file reads first, extracts the first line from the buffer,
---    and passes it to get_lang — one syscall per file instead of two.
---
--- 3. Shell quoting: SCAN_DIR was interpolated into io.popen strings with
---    only double quotes.  A path containing ", $(), or backticks would
---    break or execute unexpectedly.  All io.popen paths now go through
---    shell_quote which wraps in single quotes with proper escaping.
---
--- 4. Sentinel value: emit() set lang to "-" when the file had no known
---    extension or shebang, then render_markdown checked r.lang ~= "-".
---    Replaced with the idiomatic empty-string check (r.lang ~= "") so
---    no special sentinel is needed.
+
