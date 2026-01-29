@@ -5,18 +5,21 @@
 --Examples--
 --########--
 
--- @set:9!i
+-- @set:11!i
 -- Defines a setter with 1 line of subject
 -- And a important callout 
-print('luadoc is awesomne')
-    -- Setter
-        --> Gives instructions to
-    -- Assert
-        --> Early checks
-    -- Caller
-        --> Use the final output
-    -- Raiser
-        --> Use errors of
+print('luadoc is awesome')
+    -- Assert  -> Early checks
+    ---- guard the entry, bail early if preconditions fail
+    -- Setter  -> Gives instructions to
+    ---- define the state/config the rest depends on
+    -- Caller  -> Use the instructions
+    ---- do the actual work using those definitions
+    -- Raiser  -> Use errors of
+    ---- handle what went wrong with more definitions
+
+--########--
+-- IMPLEMTENTATION
 
 -- @set:9 Localize `string.*`, `table.*`, and `io.*` functions
 -- bypasses metatable and global lookups in the hot loop
@@ -30,7 +33,7 @@ local fmt    = string.format
 local concat = table.concat
 local open   = io.open
 
--- @cal:3!n Shell-escape a string for safe interpolation into `io.popen`
+-- @set:3!n Shell-escape a string for safe interpolation into `io.popen`
 -- prevents breakage from paths containing `"`, `$()`, or backticks
 local function shell_quote(s)
     return "'" .. gsub(s, "'", "'\\''") .. "'"
@@ -91,7 +94,7 @@ local function get_tag(line)
     end
 end
 
--- @cal:5 Extract the subject line count from `@tag:N` syntax
+-- @ass:5 Extract the subject line count from `@tag:N` syntax
 -- using pattern capture after the colon
 local function get_subject_count(text)
     local n = match(text, "@set:(%d+)") or match(text, "@ass:(%d+)") or
@@ -114,10 +117,10 @@ end
 -- @set:1 Hoisted `TAGS` table avoids per-call allocation in `strip_tags`
 local TAGS = {"@set", "@ass", "@cal", "@rai"}
 
--- @set:1 Map `!x` suffixes to GitHub admonition types
+-- @set:1 Map `!x` suffixes to admonition types
 local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
 
--- @cal:3 Extract `!x` admonition suffix from tag syntax
+-- @ass:4 Extract `!x` admonition suffix from tag syntax
 local function get_admonition(text)
     local code = match(text, "@%a+:?%d*!(%a)")
     if code then return ADMONITIONS[code] end
@@ -238,8 +241,7 @@ local function strip_comment(line, style)
     return line
 end
 
--- @ass Map file extension to fenced code block language via `ext_map`
--- falling back to shebang detection for extensionless files
+-- @set:12 Map file extension to fenced code block language
 local ext_map = {
     sh="sh", bash="sh", py="python",
     js="javascript", mjs="javascript", cjs="javascript",
@@ -253,12 +255,14 @@ local ext_map = {
     hs="haskell", ex="elixir", exs="elixir", erl="erlang",
 }
 
+-- @set:4 Map shebang interpreters to fenced code block language
 local shebang_map = {
     {"python", "python"}, {"node", "javascript"}, {"ruby", "ruby"},
     {"perl", "perl"}, {"lua", "lua"}, {"php", "php"}, {"sh", "sh"},
 }
 
--- accepts `first_line` from caller to avoid reopening the file
+-- @ass:12 Classify file language via extension or shebang
+-- accepts `first_line` to avoid reopening the file
 local function get_lang(filepath, first_line)
     local ext = match(filepath, "%.([^%.]+)$")
     if ext and ext_map[ext] then return ext_map[ext] end
@@ -272,7 +276,7 @@ local function get_lang(filepath, first_line)
     return ""
 end
 
--- Records collected across all files
+-- @set:2 Global state for collected records and line count
 local records = {}
 local total_input = 0
 
@@ -611,8 +615,8 @@ local function render_markdown()
         end
     end
 
-    render_section("SET", "Setters", "@set")
     render_section("ASS", "Asserts", "@ass")
+    render_section("SET", "Setters", "@set")
     render_section("CAL", "Callers", "@cal")
     render_section("RAI", "Raisers", "@rai")
 
@@ -621,21 +625,6 @@ end
 
 -- @cal Main function
 local function main()
-    -- @ass Early exit if output is newer than all source files
-    local nf = open(OUTPUT, "r")
-    if nf then
-        nf:close()
-        local np = io.popen(fmt(
-            'find %s -newer %s -not -path "*/.git/*" -type f 2>/dev/null | head -1',
-            shell_quote(SCAN_DIR), shell_quote(OUTPUT)))
-        local hit = np:read("*l")
-        np:close()
-        if not hit or hit == "" then
-            io.stderr:write(fmt("autodocs: %s up to date\n", OUTPUT))
-            return
-        end
-    end
-
     -- @cal:17 Discover files containing documentation tags
     -- respect `.gitignore` patterns via `grep --exclude-from`
     local gi = ""
@@ -709,9 +698,17 @@ local function main()
     local ol = select(2, gsub(markdown, "\n", "")) + 1
     io.stderr:write(fmt("autodocs: wrote %s (%d/%d = %d%%)\n",
         OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
+
+    -- @cal:4 Run `stats.awk` on the output if available
+    local script_dir = match(arg[0], "^(.*/)") or "./"
+    local stats_awk = script_dir .. "stats.awk"
+    local sf = open(stats_awk, "r")
+    if sf then
+        sf:close()
+        os.execute(fmt("awk -f %s %s >&2", shell_quote(stats_awk), shell_quote(OUTPUT)))
+    end
 end
 
 -- @cal:1 Entry point
 main()
-
 
