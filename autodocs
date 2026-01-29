@@ -85,7 +85,7 @@ _strip_tag_num() {
     _st="${_st}${_stn_rest}"
 }
 
-# @cal Remove @tag or @tag:N syntax from comment text
+# @cal:17 Remove @tag or @tag:N syntax from comment text
 strip_tags() {
     case "$1" in
         *'@set:'[0-9]*) _strip_tag_num "$1" "@set" ;;
@@ -531,7 +531,7 @@ render_markdown() {
             printf "### \`%s\`\n" "$_rs_loc"
             printf '%s' "$_rs_text" | tr '\037' '\n' | while IFS="" read -r _rs_line || [ -n "$_rs_line" ]; do
                 _trim "$_rs_line"
-                [ -n "$_tr" ] && printf '> %s\n' "$_tr" || :
+                [ -n "$_tr" ] && printf '> %s\n\n' "$_tr" || :
             done
             if [ -n "$_rs_subj" ]; then
                 if [ -n "$_rs_lang" ] && [ "$_rs_lang" != "-" ]; then
