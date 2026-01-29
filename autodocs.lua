@@ -1,7 +1,7 @@
 #!/usr/bin/env lua
 
--- @set:6 Parse CLI args with defaults
--- strip trailing slash, resolve absolute path via cd
+-- @set:7 Parse CLI args with defaults
+-- strip trailing slash, resolve absolute path via io.popen
 -- `US` separates multi-line text within record fields
 local SCAN_DIR = arg[1] or "."
 local OUTPUT   = arg[2] or "readme.md"
@@ -42,14 +42,14 @@ local function get_tag(line)
 end
 
 -- @cal:5 Extract the subject line count from `@tag:N` syntax
--- parsing leading digits after the colon
+-- using pattern capture after the colon
 local function get_subject_count(text)
     local n = text:match("@set:(%d+)") or text:match("@ass:(%d+)") or
               text:match("@cal:(%d+)") or text:match("@rai:(%d+)")
     return tonumber(n) or 0
 end
 
--- @cal:7 Strip `@tag:N` and trailing digits from text
+-- @cal:9 Strip `@tag:N` and trailing digits from text
 -- rejoining prefix with remaining content
 local function strip_tag_num(text, tag)
     local pos = text:find(tag .. ":", 1, true)
@@ -222,7 +222,7 @@ local function process_file(filepath)
     local subj    = ""
     local pending = nil
 
-    -- @cal:21 Emit a documentation record or defer for subject capture
+    -- @cal:32 Emit a documentation record or defer for subject capture
     local function emit()
         if tag ~= "" and text ~= "" then
             local tr = trim(text)
@@ -256,7 +256,7 @@ local function process_file(filepath)
         nsubj = 0
     end
 
-    -- @cal:8 Flush deferred record with captured subject lines
+    -- @cal:9 Flush deferred record with captured subject lines
     local function flush_pending()
         if pending then
             pending.subj = subj
@@ -453,7 +453,7 @@ local function process_file(filepath)
     flush_pending()
 end
 
--- @cal:39 Render intermediate records into grouped markdown
+-- @cal:52 Render intermediate records into grouped markdown
 -- with blockquotes for text and fenced code blocks for subjects
 local function render_markdown()
     local out = {}
@@ -510,8 +510,8 @@ end
 
 -- @cal Entry point
 local function main()
-    -- @cal:5 Discover files containing documentation tags
-    -- respect .gitignore patterns via --exclude-from when present
+    -- @cal:17 Discover files containing documentation tags
+    -- respect .gitignore patterns via grep --exclude-from
     local gi = ""
     local gf = io.open(SCAN_DIR .. "/.gitignore", "r")
     if gf then
@@ -544,7 +544,7 @@ local function main()
     local out_base = OUTPUT:match("([^/]+)$")
     local out_base_escaped = out_base:gsub("(%W)", "%%%1")
 
-    -- @cal:6 Process all discovered files into intermediate records
+    -- @cal:5 Process all discovered files into intermediate records
     for _, fp in ipairs(files) do
         if not fp:match("/" .. out_base_escaped .. "$") then
             process_file(fp)
@@ -562,7 +562,7 @@ local function main()
         return
     end
 
-    -- @cal:2 Render documentation and write output file
+    -- @cal:5 Render documentation and write output file
     local markdown = render_markdown()
     local f = io.open(OUTPUT, "w")
     f:write(markdown)

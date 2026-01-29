@@ -5,7 +5,7 @@
 ### `/home/hadean/Desktop/Bin/autodocs.lua:3`
 > Parse CLI args with defaults
 
-> strip trailing slash, resolve absolute path via cd
+> strip trailing slash, resolve absolute path via io.popen
 
 > `US` separates multi-line text within record fields
 
@@ -16,6 +16,7 @@ SCAN_DIR = SCAN_DIR:gsub("/$", "")
 local p = io.popen('cd "' .. SCAN_DIR .. '" && pwd')
 SCAN_DIR = p:read("*l")
 p:close()
+local US = "\031"
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:209`
@@ -131,7 +132,7 @@ end
 ### `/home/hadean/Desktop/Bin/autodocs.lua:44`
 > Extract the subject line count from `@tag:N` syntax
 
-> parsing leading digits after the colon
+> using pattern capture after the colon
 
 ```lua
 local function get_subject_count(text)
@@ -154,6 +155,8 @@ local function strip_tag_num(text, tag)
     local rest = text:sub(pos + #tag + 1)
     rest = rest:gsub("^%d+", "")
     rest = rest:gsub("^ ", "", 1)
+    return prefix .. rest
+end
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:64`
@@ -218,6 +221,17 @@ end
                         loc  = rel .. ":" .. start,
                         text = tr,
                         lang = lang,
+                        subj = "",
+                    }
+                end
+            end
+        end
+        state = ""
+        tag   = ""
+        start = ""
+        text  = ""
+        nsubj = 0
+    end
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:259`
@@ -232,6 +246,7 @@ end
             subj    = ""
             capture = 0
         end
+    end
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:456`
@@ -279,6 +294,19 @@ local function render_markdown()
                 for sline in (r.subj .. "\031"):gmatch("(.-)\031") do
                     w(sline .. "\n")
                 end
+                w("```\n")
+            end
+            w("\n")
+        end
+    end
+
+    render_section("SET", "Setters", "@set")
+    render_section("ASS", "Asserts", "@ass")
+    render_section("CAL", "Callers", "@cal")
+    render_section("RAI", "Raisers", "@rai")
+
+    return table.concat(out)
+end
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:511`
@@ -288,7 +316,7 @@ local function render_markdown()
 ### `/home/hadean/Desktop/Bin/autodocs.lua:513`
 > Discover files containing documentation tags
 
-> respect .gitignore patterns via --exclude-from when present
+> respect .gitignore patterns via grep --exclude-from
 
 ```lua
     local gi = ""
@@ -296,6 +324,18 @@ local function render_markdown()
     if gf then
         gf:close()
         gi = "--exclude-from=" .. SCAN_DIR .. "/.gitignore"
+    end
+
+    local cmd = string.format(
+        'grep -rl -I --exclude-dir=.git %s -e "@set" -e "@ass" -e "@cal" -e "@rai" "%s" 2>/dev/null',
+        gi, SCAN_DIR
+    )
+    local pipe = io.popen(cmd)
+    local files = {}
+    for line in pipe:lines() do
+        files[#files + 1] = line
+    end
+    pipe:close()
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:547`
@@ -307,7 +347,6 @@ local function render_markdown()
             process_file(fp)
         end
     end
-
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:565`
@@ -316,6 +355,9 @@ local function render_markdown()
 ```lua
     local markdown = render_markdown()
     local f = io.open(OUTPUT, "w")
+    f:write(markdown)
+    f:close()
+    io.stderr:write(string.format("autodocs: wrote %s\n", OUTPUT))
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:573`
