@@ -13,7 +13,8 @@ local concat = table.concat
 local open   = io.open
 
 -- @cal:3 Shell-escape a string for safe interpolation into `io.popen`
--- [!NOTE] prevents breakage from paths containing `"`, `$()`, or backticks
+-- [!NOTE]
+-- prevents breakage from paths containing `"`, `$()`, or backticks
 local function shell_quote(s)
     return "'" .. gsub(s, "'", "'\\''") .. "'"
 end
@@ -244,7 +245,8 @@ local total_input = 0
 -- extracting tagged comments into `records` table
 local function process_file(filepath)
     -- @set:4 Bulk-read file first so `get_lang` reuses the buffer
-    -- [!NOTE] avoids a second `open`+`read` just for shebang detection
+    -- [!NOTE]
+    -- avoids a second `open`+`read` just for shebang detection
     local f = open(filepath, "r")
     if not f then return end
     local content = f:read("*a")
@@ -267,7 +269,8 @@ local function process_file(filepath)
     local pending = nil
 
     -- @cal:30 Emit a documentation record or defer for subject capture
-    -- [!NOTE] `lang` is passed through as-is, empty string means no fence label
+    -- [!NOTE]
+    -- `lang` is passed through as-is, empty string means no fence label
     local function emit()
         if tag ~= "" and text ~= "" then
             local tr = trim(text)
@@ -609,7 +612,8 @@ local function main()
     end
 
     -- @cal:7 Render documentation, write output, and report ratio
-    -- [!NOTE] wraps across two lines so `:N` count must include the continuation
+    -- [!NOTE]
+    -- wraps across two lines so `:N` count must include the continuation
     local markdown = render_markdown()
     local f = open(OUTPUT, "w")
     f:write(markdown)

@@ -19,7 +19,7 @@ local concat = table.concat
 local open   = io.open
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:21`
+### `/home/hadean/Desktop/Bin/autodocs.lua:22`
 > Parse CLI args with defaults
 
 > strip trailing slash, resolve absolute path via `io.popen`
@@ -37,17 +37,19 @@ p:close()
 local US = "\031"
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:93`
+### `/home/hadean/Desktop/Bin/autodocs.lua:94`
 > Hoisted `TAGS` table avoids per-call allocation in `strip_tags`
 
 ```lua
 local TAGS = {"@set", "@ass", "@cal", "@rai"}
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:246`
+### `/home/hadean/Desktop/Bin/autodocs.lua:247`
 > Bulk-read file first so `get_lang` reuses the buffer
 
-> [!NOTE] avoids a second `open`+`read` just for shebang detection
+> [!NOTE]
+
+> avoids a second `open`+`read` just for shebang detection
 
 ```lua
     local f = open(filepath, "r")
@@ -56,7 +58,7 @@ local TAGS = {"@set", "@ass", "@cal", "@rai"}
     f:close()
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:253`
+### `/home/hadean/Desktop/Bin/autodocs.lua:255`
 > Initialize per-file state machine variables
 
 > `get_lang` receives first line to avoid reopening the file
@@ -79,7 +81,7 @@ local TAGS = {"@set", "@ass", "@cal", "@rai"}
 
 ## Asserts (@ass)
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:56`
+### `/home/hadean/Desktop/Bin/autodocs.lua:57`
 > Test whether a line contains any documentation tag
 
 > early `@` check short-circuits lines with no tags
@@ -92,7 +94,7 @@ local function has_tag(line)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:64`
+### `/home/hadean/Desktop/Bin/autodocs.lua:65`
 > Classify a tagged line into `SET`, `ASS`, `CAL`, or `RAI`
 
 ```lua
@@ -105,7 +107,7 @@ local function get_tag(line)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:115`
+### `/home/hadean/Desktop/Bin/autodocs.lua:116`
 > Detect comment style via byte-level prefix check
 
 > skips leading whitespace without allocating a trimmed copy
@@ -134,17 +136,17 @@ local function detect_style(line)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:205`
+### `/home/hadean/Desktop/Bin/autodocs.lua:206`
 > Map file extension to fenced code block language via `ext_map`
 
 > falling back to shebang detection for extensionless files
 
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:579`
+### `/home/hadean/Desktop/Bin/autodocs.lua:582`
 > Verify tagged files were discovered
 
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:600`
+### `/home/hadean/Desktop/Bin/autodocs.lua:603`
 > Verify extraction produced results
 
 
@@ -153,7 +155,9 @@ end
 ### `/home/hadean/Desktop/Bin/autodocs.lua:15`
 > Shell-escape a string for safe interpolation into `io.popen`
 
-> [!NOTE] prevents breakage from paths containing `"`, `$()`, or backticks
+> [!NOTE]
+
+> prevents breakage from paths containing `"`, `$()`, or backticks
 
 ```lua
 local function shell_quote(s)
@@ -161,7 +165,7 @@ local function shell_quote(s)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:33`
+### `/home/hadean/Desktop/Bin/autodocs.lua:34`
 > Strip leading spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -175,7 +179,7 @@ local function trim_lead(s)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:42`
+### `/home/hadean/Desktop/Bin/autodocs.lua:43`
 > Strip trailing spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -189,7 +193,7 @@ local function trim_trail(s)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:51`
+### `/home/hadean/Desktop/Bin/autodocs.lua:52`
 > Trim both ends via `trim_lead` and `trim_trail`
 
 ```lua
@@ -198,7 +202,7 @@ local function trim(s)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:73`
+### `/home/hadean/Desktop/Bin/autodocs.lua:74`
 > Extract the subject line count from `@tag:N` syntax
 
 > using pattern capture after the colon
@@ -211,7 +215,7 @@ local function get_subject_count(text)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:81`
+### `/home/hadean/Desktop/Bin/autodocs.lua:82`
 > Strip `@tag:N` and trailing digits from text
 
 > rejoining prefix with remaining content
@@ -228,7 +232,7 @@ local function strip_tag_num(text, tag)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:96`
+### `/home/hadean/Desktop/Bin/autodocs.lua:97`
 > Remove `@tag` or `@tag:N` syntax from comment text
 
 > delegates to `strip_tag_num` for `:N` variants
@@ -252,22 +256,24 @@ local function strip_tags(text)
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:139`
+### `/home/hadean/Desktop/Bin/autodocs.lua:140`
 > Strip comment delimiters and extract inner text
 
 > for all styles including block continuations
 
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:243`
+### `/home/hadean/Desktop/Bin/autodocs.lua:244`
 > Walk one file as a line-by-line state machine
 
 > extracting tagged comments into `records` table
 
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:269`
+### `/home/hadean/Desktop/Bin/autodocs.lua:271`
 > Emit a documentation record or defer for subject capture
 
-> [!NOTE] `lang` is passed through as-is, empty string means no fence label
+> [!NOTE]
+
+> `lang` is passed through as-is, empty string means no fence label
 
 ```lua
     local function emit()
@@ -302,7 +308,7 @@ end
     end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:302`
+### `/home/hadean/Desktop/Bin/autodocs.lua:305`
 > Flush deferred record with captured `subj` lines
 
 ```lua
@@ -317,7 +323,7 @@ end
     end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:502`
+### `/home/hadean/Desktop/Bin/autodocs.lua:505`
 > Render `records` into grouped markdown
 
 > with blockquotes for text and fenced code blocks for subjects
@@ -377,11 +383,11 @@ local function render_markdown()
 end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:557`
+### `/home/hadean/Desktop/Bin/autodocs.lua:560`
 > Entry point
 
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:559`
+### `/home/hadean/Desktop/Bin/autodocs.lua:562`
 > Discover files containing documentation tags
 
 > respect `.gitignore` patterns via `grep --exclude-from`
@@ -406,7 +412,7 @@ end
     pipe:close()
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:593`
+### `/home/hadean/Desktop/Bin/autodocs.lua:596`
 > Process all discovered files into intermediate `records`
 
 ```lua
@@ -417,10 +423,12 @@ end
     end
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:611`
+### `/home/hadean/Desktop/Bin/autodocs.lua:614`
 > Render documentation, write output, and report ratio
 
-> [!NOTE] wraps across two lines so `:N` count must include the continuation
+> [!NOTE]
+
+> wraps across two lines so `:N` count must include the continuation
 
 ```lua
     local markdown = render_markdown()
@@ -432,7 +440,7 @@ end
         OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:622`
+### `/home/hadean/Desktop/Bin/autodocs.lua:626`
 > Entry point
 
 ```lua
@@ -441,7 +449,7 @@ main()
 
 ## Raisers (@rai)
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:581`
+### `/home/hadean/Desktop/Bin/autodocs.lua:584`
 > Handle missing tagged files
 
 > with empty output and `stderr` warning
@@ -452,7 +460,7 @@ main()
         f:close()
 ```
 
-### `/home/hadean/Desktop/Bin/autodocs.lua:602`
+### `/home/hadean/Desktop/Bin/autodocs.lua:605`
 > Handle extraction failure
 
 > with empty output and `stderr` warning
