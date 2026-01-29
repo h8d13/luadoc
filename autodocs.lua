@@ -28,16 +28,19 @@ local function shell_quote(s)
     return "'" .. gsub(s, "'", "'\\''") .. "'"
 end
 
--- @set:8 Parse CLI args with defaults
--- strip trailing slash, resolve absolute path via `io.popen`
+-- @set:11 Parse CLI args with defaults
+-- strip trailing slash, resolve absolute path via `/proc/self/environ`
 -- `US` separates multi-line text within record fields
 local TITLE    = "Autodocs"
 local SCAN_DIR = arg[1] or "."
 local OUTPUT   = arg[2] or "readme.md"
 SCAN_DIR = gsub(SCAN_DIR, "/$", "")
-local p = io.popen('cd ' .. shell_quote(SCAN_DIR) .. ' && pwd')
-SCAN_DIR = p:read("*l")
-p:close()
+if sub(SCAN_DIR, 1, 1) ~= "/" then
+    local ef = open("/proc/self/environ", "rb")
+    local cwd = ef and match(ef:read("*a"), "PWD=([^%z]+)")
+    if ef then ef:close() end
+    SCAN_DIR = (SCAN_DIR == ".") and cwd or cwd .. "/" .. SCAN_DIR
+end
 local US = "\031"
 
 -- @cal:6 Strip leading spaces and tabs via byte scan
