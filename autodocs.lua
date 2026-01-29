@@ -5,7 +5,7 @@
 --Examples--
 --########--
 
--- @set:1!n
+-- @set:1!i
 -- Defines a setter with 1 line of subject
 -- And a note callout
 print('luadoc is awesomne')

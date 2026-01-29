@@ -3,7 +3,7 @@
 ## Setters (@set)
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:8`
-> [!NOTE]
+> [!IMPORTANT]
 > Defines a setter with 1 line of subject
 
 And a note callout
