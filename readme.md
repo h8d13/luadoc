@@ -6,7 +6,7 @@
 `-s` outputs extra stats
 
 
-### <a id="chk-1-1"></a>1.1 ~/Desktop/Bin/autodocs.lua:90
+### <a id="chk-2"></a>2. ~/Desktop/Bin/autodocs.lua:89
 Test whether a line contains any documentation tag
 
 > early `@` check short-circuits lines with no tags
@@ -19,7 +19,7 @@ local function has_tag(line)
 end
 ```
 
-### <a id="chk-1-2"></a>1.2 ~/Desktop/Bin/autodocs.lua:98
+### <a id="chk-3"></a>3. ~/Desktop/Bin/autodocs.lua:97
 Classify a tagged line into `DEF`, `CHK`, `RUN`, or `ERR`
 
 ```lua
@@ -32,7 +32,7 @@ local function get_tag(line)
 end
 ```
 
-### <a id="chk-1-3"></a>1.3 ~/Desktop/Bin/autodocs.lua:107
+### <a id="chk-4"></a>4. ~/Desktop/Bin/autodocs.lua:106
 Extract the subject line count from `@tag:N` syntax
 
 > using pattern capture after the colon
@@ -45,7 +45,7 @@ local function get_subject_count(text)
 end
 ```
 
-### <a id="chk-1-4"></a>1.4 ~/Desktop/Bin/autodocs.lua:137
+### <a id="chk-5"></a>5. ~/Desktop/Bin/autodocs.lua:136
 Extract `!x` admonition suffix from tag syntax
 
 ```lua
@@ -55,7 +55,7 @@ local function get_admonition(text)
 end
 ```
 
-### <a id="chk-1-5"></a>1.5 ~/Desktop/Bin/autodocs.lua:168
+### <a id="chk-6"></a>6. ~/Desktop/Bin/autodocs.lua:167
 Detect comment style via byte-level prefix check
 
 > skips leading whitespace without allocating a trimmed copy
@@ -84,63 +84,63 @@ local function detect_style(line)
 end
 ```
 
-### <a id="chk-1-6"></a>1.6 ~/Desktop/Bin/autodocs.lua:195
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-7"></a>7. ~/Desktop/Bin/autodocs.lua:194
+*↳ [Runners 6.](#run-6)*
 
 shell type comments
 
 
-### <a id="chk-1-7"></a>1.7 ~/Desktop/Bin/autodocs.lua:199
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-8"></a>8. ~/Desktop/Bin/autodocs.lua:198
+*↳ [Runners 6.](#run-6)*
 
 double-slash comments
 
 
-### <a id="chk-1-8"></a>1.8 ~/Desktop/Bin/autodocs.lua:204
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-9"></a>9. ~/Desktop/Bin/autodocs.lua:203
+*↳ [Runners 6.](#run-6)*
 
 double-dash comments
 
 
-### <a id="chk-1-9"></a>1.9 ~/Desktop/Bin/autodocs.lua:209
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-10"></a>10. ~/Desktop/Bin/autodocs.lua:208
+*↳ [Runners 6.](#run-6)*
 
 C-style block opening
 
 
-### <a id="chk-1-10"></a>1.10 ~/Desktop/Bin/autodocs.lua:216
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-11"></a>11. ~/Desktop/Bin/autodocs.lua:215
+*↳ [Runners 6.](#run-6)*
 
 HTML comment opening
 
 
-### <a id="chk-1-11"></a>1.11 ~/Desktop/Bin/autodocs.lua:223
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-12"></a>12. ~/Desktop/Bin/autodocs.lua:222
+*↳ [Runners 6.](#run-6)*
 
 block comment continuation lines
 
 
-### <a id="chk-1-12"></a>1.12 ~/Desktop/Bin/autodocs.lua:234
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-13"></a>13. ~/Desktop/Bin/autodocs.lua:233
+*↳ [Runners 6.](#run-6)*
 
 html closing
 
 
-### <a id="chk-1-13"></a>1.13 ~/Desktop/Bin/autodocs.lua:240
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-14"></a>14. ~/Desktop/Bin/autodocs.lua:239
+*↳ [Runners 6.](#run-6)*
 
 triple-quote docstring styles
 
 
-### <a id="chk-1-14"></a>1.14 ~/Desktop/Bin/autodocs.lua:253
-*↳ [Runners 1.5](#run-1-5)*
+### <a id="chk-15"></a>15. ~/Desktop/Bin/autodocs.lua:252
+*↳ [Runners 6.](#run-6)*
 
 docstring continuation lines
 
 > no opening delimiter to strip; checks both `"""` and `'''` closers
 
 
-### <a id="chk-1-15"></a>1.15 ~/Desktop/Bin/autodocs.lua:287
+### <a id="chk-16"></a>16. ~/Desktop/Bin/autodocs.lua:286
 Classify file language via extension or shebang
 
 > accepts `first_line` to avoid reopening the file
@@ -160,50 +160,50 @@ local function get_lang(filepath, first_line)
 end
 ```
 
-### <a id="chk-1-16"></a>1.16 ~/Desktop/Bin/autodocs.lua:432
-*↳ [Runners 1.8](#run-1-8)*
+### <a id="chk-17"></a>17. ~/Desktop/Bin/autodocs.lua:431
+*↳ [Runners 7.2](#run-7-2)*
 
 Scan untagged block comment for tags
 
 
-### <a id="chk-1-17"></a>1.17 ~/Desktop/Bin/autodocs.lua:451
-*↳ [Runners 1.8](#run-1-8)*
+### <a id="chk-18"></a>18. ~/Desktop/Bin/autodocs.lua:450
+*↳ [Runners 7.2](#run-7-2)*
 
 Scan untagged HTML comment for tags
 
 
-### <a id="chk-1-18"></a>1.18 ~/Desktop/Bin/autodocs.lua:484
-*↳ [Runners 1.8](#run-1-8)*
+### <a id="chk-19"></a>19. ~/Desktop/Bin/autodocs.lua:483
+*↳ [Runners 7.2](#run-7-2)*
 
 Scan untagged docstring for tags
 
 
-### <a id="chk-1-19"></a>1.19 ~/Desktop/Bin/autodocs.lua:509
-*↳ [Runners 1.8](#run-1-8)*
+### <a id="chk-20"></a>20. ~/Desktop/Bin/autodocs.lua:508
+*↳ [Runners 7.2](#run-7-2)*
 
 Detect comment style of current line
 
 
-### <a id="chk-1-20"></a>1.20 ~/Desktop/Bin/autodocs.lua:551
-*↳ [Runners 1.8](#run-1-8)*
+### <a id="chk-21"></a>21. ~/Desktop/Bin/autodocs.lua:550
+*↳ [Runners 7.2](#run-7-2)*
 
 Untagged block comment start - scan for tags
 
 
-### <a id="chk-1-21"></a>1.21 ~/Desktop/Bin/autodocs.lua:677
-*↳ [Runners 1.17](#run-1-17)*
+### <a id="chk-22"></a>22. ~/Desktop/Bin/autodocs.lua:678
+*↳ [Runners 9.](#run-9)*
 
 Verify tagged files were discovered
 
 
-### <a id="chk-1-22"></a>1.22 ~/Desktop/Bin/autodocs.lua:698
-*↳ [Runners 1.17](#run-1-17)*
+### <a id="chk-23"></a>23. ~/Desktop/Bin/autodocs.lua:699
+*↳ [Runners 9.](#run-9)*
 
 Verify extraction produced results
 
 
-### <a id="chk-1-23"></a>1.23 ~/Desktop/Bin/autodocs.lua:744
-*↳ [Runners 1.17](#run-1-17)*
+### <a id="chk-24"></a>24. ~/Desktop/Bin/autodocs.lua:748
+*↳ [Runners 9.](#run-9)*
 
 Render and compare against existing output
 
@@ -226,11 +226,9 @@ Render and compare against existing output
 
 ### <a id="def-1"></a>1. ~/Desktop/Bin/autodocs.lua:10
 > [!IMPORTANT]
-> Defines a setter with 1 line of subject
+> Defines with 9 line of subject
 
-And a important callout
-
-9 lines are inluded as the subject
+And a important callout style
 
 after the end of comment block
 
@@ -254,7 +252,7 @@ print('luadoc is awesome')
     ---- handle errors with more definitions
 ```
 
-### <a id="def-1-1"></a>1.1 ~/Desktop/Bin/autodocs.lua:32
+### <a id="def-2"></a>2. ~/Desktop/Bin/autodocs.lua:31
 Localize `string.*`, `table.*`, and `io.*` functions
 
 > bypasses metatable and global lookups in the hot loop
@@ -271,7 +269,7 @@ local concat = table.concat
 local open   = io.open
 ```
 
-### <a id="def-1-2"></a>1.2 ~/Desktop/Bin/autodocs.lua:44
+### <a id="def-3"></a>3. ~/Desktop/Bin/autodocs.lua:43
 > [!NOTE]
 > Shell-escape a string for safe interpolation into `io.popen`
 
@@ -283,7 +281,7 @@ local function shell_quote(s)
 end
 ```
 
-### <a id="def-1-3"></a>1.3 ~/Desktop/Bin/autodocs.lua:50
+### <a id="def-4"></a>4. ~/Desktop/Bin/autodocs.lua:49
 Parse CLI args with defaults
 
 > strip trailing slash, resolve absolute path via `/proc/self/environ`
@@ -302,23 +300,25 @@ if sub(SCAN_DIR, 1, 1) ~= "/" then
     if ef then ef:close() end
     SCAN_DIR = (SCAN_DIR == ".") and cwd or cwd .. "/" .. SCAN_DIR
 end
+local HOME = match(SCAN_DIR, "^(/[^/]+/[^/]+)")
+local US = "\031"
 ```
 
-### <a id="def-1-4"></a>1.4 ~/Desktop/Bin/autodocs.lua:127
+### <a id="def-5"></a>5. ~/Desktop/Bin/autodocs.lua:126
 Hoisted `TAGS` table avoids per-call allocation in `strip_tags`
 
 ```lua
 local TAGS = {"@def", "@chk", "@run", "@err"}
 ```
 
-### <a id="def-1-5"></a>1.5 ~/Desktop/Bin/autodocs.lua:130
+### <a id="def-6"></a>6. ~/Desktop/Bin/autodocs.lua:129
 Map `!x` suffixes to admonition types
 
 ```lua
 local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
 ```
 
-### <a id="def-1-6"></a>1.6 ~/Desktop/Bin/autodocs.lua:133
+### <a id="def-7"></a>7. ~/Desktop/Bin/autodocs.lua:132
 Map tag prefixes to anchor slugs and section titles
 
 ```lua
@@ -326,7 +326,7 @@ local TAG_SEC   = {CHK="chk", DEF="def", RUN="run", ERR="err"}
 local TAG_TITLE = {CHK="Checks", DEF="Defines", RUN="Runners", ERR="Errors"}
 ```
 
-### <a id="def-1-7"></a>1.7 ~/Desktop/Bin/autodocs.lua:267
+### <a id="def-8"></a>8. ~/Desktop/Bin/autodocs.lua:266
 Map file extension to fenced code block language
 
 ```lua
@@ -344,7 +344,7 @@ local ext_map = {
 }
 ```
 
-### <a id="def-1-8"></a>1.8 ~/Desktop/Bin/autodocs.lua:281
+### <a id="def-9"></a>9. ~/Desktop/Bin/autodocs.lua:280
 Map shebang interpreters to fenced code block language
 
 ```lua
@@ -354,7 +354,7 @@ local shebang_map = {
 }
 ```
 
-### <a id="def-1-9"></a>1.9 ~/Desktop/Bin/autodocs.lua:302
+### <a id="def-10"></a>10. ~/Desktop/Bin/autodocs.lua:301
 Global state for collected records and line count
 
 ```lua
@@ -362,8 +362,8 @@ local records = {}
 local total_input = 0
 ```
 
-### <a id="def-1-10"></a>1.10 ~/Desktop/Bin/autodocs.lua:309
-*↳ [Runners 1.6](#run-1-6)*
+### <a id="def-11"></a>11. ~/Desktop/Bin/autodocs.lua:308
+*↳ [Runners 7.](#run-7)*
 
 > [!NOTE]
 > Bulk-read file first so `get_lang` reuses the buffer
@@ -377,8 +377,8 @@ avoids a second `open`+`read` just for shebang detection
     f:close()
 ```
 
-### <a id="def-1-11"></a>1.11 ~/Desktop/Bin/autodocs.lua:316
-*↳ [Runners 1.6](#run-1-6)*
+### <a id="def-12"></a>12. ~/Desktop/Bin/autodocs.lua:315
+*↳ [Runners 7.](#run-7)*
 
 Initialize per-file state machine variables
 
@@ -404,7 +404,7 @@ Initialize per-file state machine variables
 
 ## Runners (@run)
 
-### <a id="run-1"></a>1. ~/Desktop/Bin/autodocs.lua:67
+### <a id="run-1"></a>1. ~/Desktop/Bin/autodocs.lua:66
 Strip leading spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -418,7 +418,7 @@ local function trim_lead(s)
 end
 ```
 
-### <a id="run-1-1"></a>1.1 ~/Desktop/Bin/autodocs.lua:76
+### <a id="run-2"></a>2. ~/Desktop/Bin/autodocs.lua:75
 Strip trailing spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -432,7 +432,7 @@ local function trim_trail(s)
 end
 ```
 
-### <a id="run-1-2"></a>1.2 ~/Desktop/Bin/autodocs.lua:85
+### <a id="run-3"></a>3. ~/Desktop/Bin/autodocs.lua:84
 Trim both ends via `trim_lead` and `trim_trail`
 
 ```lua
@@ -441,7 +441,7 @@ local function trim(s)
 end
 ```
 
-### <a id="run-1-3"></a>1.3 ~/Desktop/Bin/autodocs.lua:115
+### <a id="run-4"></a>4. ~/Desktop/Bin/autodocs.lua:114
 Strip `@tag:N` and trailing digits from text
 
 > rejoining prefix with remaining content
@@ -458,7 +458,7 @@ local function strip_tag_num(text, tag)
 end
 ```
 
-### <a id="run-1-4"></a>1.4 ~/Desktop/Bin/autodocs.lua:143
+### <a id="run-5"></a>5. ~/Desktop/Bin/autodocs.lua:142
 Remove `@tag`, `@tag:N`, or `@tag!x` syntax from comment text
 
 > delegates to `strip_tag_num` for `:N` and `:N!x` variants
@@ -488,20 +488,20 @@ local function strip_tags(text)
 end
 ```
 
-### <a id="run-1-5"></a>1.5 ~/Desktop/Bin/autodocs.lua:192
+### <a id="run-6"></a>6. ~/Desktop/Bin/autodocs.lua:191
 Strip comment delimiters and extract inner text
 
 > for all styles including block continuations
 
 
-### <a id="run-1-6"></a>1.6 ~/Desktop/Bin/autodocs.lua:306
+### <a id="run-7"></a>7. ~/Desktop/Bin/autodocs.lua:305
 Walk one file as a line-by-line state machine
 
 > extracting tagged comments into `records` table
 
 
-### <a id="run-1-7"></a>1.7 ~/Desktop/Bin/autodocs.lua:334
-*↳ [Runners 1.6](#run-1-6)*
+#### <a id="run-7-1"></a>7.1 ~/Desktop/Bin/autodocs.lua:333
+*↳ [Runners 7.](#run-7)*
 
 > [!NOTE]
 > Emit a documentation record or defer for subject capture
@@ -548,8 +548,8 @@ Walk one file as a line-by-line state machine
     end
 ```
 
-### <a id="run-1-8"></a>1.8 ~/Desktop/Bin/autodocs.lua:374
-*↳ [Runners 1.6](#run-1-6)*
+#### <a id="run-7-2"></a>7.2 ~/Desktop/Bin/autodocs.lua:373
+*↳ [Runners 7.](#run-7)*
 
 Flush deferred record with captured `subj` lines
 
@@ -565,49 +565,49 @@ Flush deferred record with captured `subj` lines
     end
 ```
 
-### <a id="run-1-9"></a>1.9 ~/Desktop/Bin/autodocs.lua:394
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-1"></a>7.2.1 ~/Desktop/Bin/autodocs.lua:393
+*↳ [Runners 7.2](#run-7-2)*
 
 Subject line capture mode
 
 
-### <a id="run-1-10"></a>1.10 ~/Desktop/Bin/autodocs.lua:406
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-2"></a>7.2.2 ~/Desktop/Bin/autodocs.lua:405
+*↳ [Runners 7.2](#run-7-2)*
 
 Accumulate C-style block comment with tag
 
 
-### <a id="run-1-11"></a>1.11 ~/Desktop/Bin/autodocs.lua:419
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-3"></a>7.2.3 ~/Desktop/Bin/autodocs.lua:418
+*↳ [Runners 7.2](#run-7-2)*
 
 Accumulate HTML comment with tag
 
 
-### <a id="run-1-12"></a>1.12 ~/Desktop/Bin/autodocs.lua:470
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-4"></a>7.2.4 ~/Desktop/Bin/autodocs.lua:469
+*↳ [Runners 7.2](#run-7-2)*
 
 Accumulate docstring with tag
 
 
-### <a id="run-1-13"></a>1.13 ~/Desktop/Bin/autodocs.lua:512
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-5"></a>7.2.5 ~/Desktop/Bin/autodocs.lua:511
+*↳ [Runners 7.2](#run-7-2)*
 
 Continue or close existing single-line comment block
 
 
-### <a id="run-1-14"></a>1.14 ~/Desktop/Bin/autodocs.lua:527
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-6"></a>7.2.6 ~/Desktop/Bin/autodocs.lua:526
+*↳ [Runners 7.2](#run-7-2)*
 
 Dispatch new tagged comment by style
 
 
-### <a id="run-1-15"></a>1.15 ~/Desktop/Bin/autodocs.lua:564
-*↳ [Runners 1.8](#run-1-8)*
+##### <a id="run-7-2-7"></a>7.2.7 ~/Desktop/Bin/autodocs.lua:563
+*↳ [Runners 7.2](#run-7-2)*
 
 Begin subject capture if waiting and hit a code line
 
 
-### <a id="run-1-16"></a>1.16 ~/Desktop/Bin/autodocs.lua:582
+### <a id="run-8"></a>8. ~/Desktop/Bin/autodocs.lua:581
 Render `records` into grouped markdown
 
 > with blockquotes for text and fenced code blocks for subjects
@@ -625,7 +625,9 @@ local function render_markdown(grouped)
         w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
         for _, r in ipairs(entries) do
-            w(fmt('### <a id="%s"></a>%s %s\n', r.anchor, r.idx, r.loc))
+            local d = r.depth or 0
+            local h = d == 0 and "###" or d == 1 and "####" or "#####"
+            w(fmt('%s <a id="%s"></a>%s %s\n', h, r.anchor, r.idx, r.loc))
             if r.parent and r.parent.anchor then
                 w(fmt("*↳ [%s %s](#%s)*\n\n", r.parent.sec_title, r.parent.idx, r.parent.anchor))
             end
@@ -685,12 +687,12 @@ local function render_markdown(grouped)
 end
 ```
 
-### <a id="run-1-17"></a>1.17 ~/Desktop/Bin/autodocs.lua:655
+### <a id="run-9"></a>9. ~/Desktop/Bin/autodocs.lua:656
 Main function
 
 
-### <a id="run-1-18"></a>1.18 ~/Desktop/Bin/autodocs.lua:657
-*↳ [Runners 1.17](#run-1-17)*
+#### <a id="run-9-1"></a>9.1 ~/Desktop/Bin/autodocs.lua:658
+*↳ [Runners 9.](#run-9)*
 
 Discover files containing documentation tags
 
@@ -716,8 +718,8 @@ Discover files containing documentation tags
     pipe:close()
 ```
 
-### <a id="run-1-19"></a>1.19 ~/Desktop/Bin/autodocs.lua:691
-*↳ [Runners 1.17](#run-1-17)*
+#### <a id="run-9-2"></a>9.2 ~/Desktop/Bin/autodocs.lua:692
+*↳ [Runners 9.](#run-9)*
 
 Process all discovered files into intermediate `records`
 
@@ -729,14 +731,14 @@ Process all discovered files into intermediate `records`
     end
 ```
 
-### <a id="run-1-20"></a>1.20 ~/Desktop/Bin/autodocs.lua:709
-*↳ [Runners 1.17](#run-1-17)*
+#### <a id="run-9-3"></a>9.3 ~/Desktop/Bin/autodocs.lua:710
+*↳ [Runners 9.](#run-9)*
 
 Resolve parents, assign indices, group by tag (single pass)
 
 
-### <a id="run-1-21"></a>1.21 ~/Desktop/Bin/autodocs.lua:757
-*↳ [Runners 1.17](#run-1-17)*
+#### <a id="run-9-4"></a>9.4 ~/Desktop/Bin/autodocs.lua:761
+*↳ [Runners 9.](#run-9)*
 
 Write output and report ratio
 
@@ -751,8 +753,8 @@ Write output and report ratio
         OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
 ```
 
-### <a id="run-1-22"></a>1.22 ~/Desktop/Bin/autodocs.lua:766
-*↳ [Runners 1.17](#run-1-17)*
+#### <a id="run-9-5"></a>9.5 ~/Desktop/Bin/autodocs.lua:770
+*↳ [Runners 9.](#run-9)*
 
 Run `stats.awk` on the output if `-s` flag is set
 
@@ -768,7 +770,7 @@ Run `stats.awk` on the output if `-s` flag is set
     end
 ```
 
-### <a id="run-1-23"></a>1.23 ~/Desktop/Bin/autodocs.lua:778
+### <a id="run-10"></a>10. ~/Desktop/Bin/autodocs.lua:782
 Entry point
 
 ```lua
@@ -777,8 +779,8 @@ main()
 
 ## Errors (@err)
 
-### <a id="err-1"></a>1. ~/Desktop/Bin/autodocs.lua:679
-*↳ [Checks 1.21](#chk-1-21)*
+### <a id="err-1"></a>1. ~/Desktop/Bin/autodocs.lua:680
+*↳ [Checks 22.](#chk-22)*
 
 Handle missing tagged files
 
@@ -792,8 +794,8 @@ Handle missing tagged files
         return
 ```
 
-### <a id="err-1-1"></a>1.1 ~/Desktop/Bin/autodocs.lua:700
-*↳ [Checks 1.22](#chk-1-22)*
+### <a id="err-2"></a>2. ~/Desktop/Bin/autodocs.lua:701
+*↳ [Checks 23.](#chk-23)*
 
 Handle extraction failure
 

@@ -8,9 +8,8 @@
 --########--
 
 -- @def:9!i
--- Defines a setter with 1 line of subject
--- And a important callout
--- 9 lines are inluded as the subject 
+-- Defines with 9 line of subject
+-- And a important callout style
 -- after the end of comment block
 -- `!n` NOTE
 -- `!t` TIP
@@ -47,7 +46,7 @@ local function shell_quote(s)
     return "'" .. gsub(s, "'", "'\\''") .. "'"
 end
 
--- @def:11 Parse CLI args with defaults
+-- @def:13 Parse CLI args with defaults
 -- strip trailing slash, resolve absolute path via `/proc/self/environ`
 -- `US` separates multi-line text within record fields
 local TITLE    = "Autodocs"
@@ -579,7 +578,7 @@ local function process_file(filepath)
     total_input = total_input + ln
 end
 
--- @run:70 Render `records` into grouped markdown
+-- @run:72 Render `records` into grouped markdown
 -- with blockquotes for text and fenced code blocks for subjects
 local function render_markdown(grouped)
     local out = {}
@@ -593,7 +592,9 @@ local function render_markdown(grouped)
         w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
         for _, r in ipairs(entries) do
-            w(fmt('### <a id="%s"></a>%s %s\n', r.anchor, r.idx, r.loc))
+            local d = r.depth or 0
+            local h = d == 0 and "###" or d == 1 and "####" or "#####"
+            w(fmt('%s <a id="%s"></a>%s %s\n', h, r.anchor, r.idx, r.loc))
             if r.parent and r.parent.anchor then
                 w(fmt("*↳ [%s %s](#%s)*\n\n", r.parent.sec_title, r.parent.idx, r.parent.anchor))
             end
@@ -707,13 +708,11 @@ local function main()
     end
 
     -- @run Resolve parents, assign indices, group by tag (single pass)
-    local cf = {CHK="", DEF="", RUN="", ERR=""}
     local mi = {CHK=0, DEF=0, RUN=0, ERR=0}
-    local si = {CHK=0, DEF=0, RUN=0, ERR=0}
     local grouped = {CHK={}, DEF={}, RUN={}, ERR={}}
     local scope = {}
     local scope_file = ""
-    for i, r in ipairs(records) do
+    for _, r in ipairs(records) do
         if r.file ~= scope_file then
             scope_file = r.file
             scope = {}
@@ -727,16 +726,21 @@ local function main()
         local t = r.tag
         local g = grouped[t]
         g[#g + 1] = r
-        if cf[t] ~= r.file then
-            cf[t] = r.file
+        if r.parent and r.parent.tag == t then
+            r.parent._cc = (r.parent._cc or 0) + 1
+            local cc = r.parent._cc
+            if r.parent.depth == 0 then
+                r.idx = fmt("%s%d", r.parent.idx, cc)
+            else
+                r.idx = fmt("%s.%d", r.parent.idx, cc)
+            end
+            r.anchor = fmt("%s-%d", r.parent.anchor, cc)
+            r.depth = r.parent.depth + 1
+        else
             mi[t] = mi[t] + 1
-            si[t] = 0
             r.idx = fmt("%d.", mi[t])
             r.anchor = fmt("%s-%d", TAG_SEC[t], mi[t])
-        else
-            si[t] = si[t] + 1
-            r.idx = fmt("%d.%d", mi[t], si[t])
-            r.anchor = fmt("%s-%d-%d", TAG_SEC[t], mi[t], si[t])
+            r.depth = 0
         end
         r.sec_title = TAG_TITLE[t]
     end
