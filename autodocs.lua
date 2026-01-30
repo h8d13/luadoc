@@ -7,7 +7,13 @@
 
 -- @def:9!i
 -- Defines a setter with 1 line of subject
--- And a important callout 
+-- And a important callout
+-- 9 lines are inluded as the subject 
+-- after the end of comment block
+-- `!n` NOTE
+-- `!t` TIP
+-- `!w` WARN
+-- `!c` CAUTION
 print('luadoc is awesome')
     -- Check  -> Early checks
     ---- guard the entry, bail early if preconditions fail
@@ -690,7 +696,7 @@ local function main()
         end
     end
 
-    -- @run:6!n Write output and report ratio
+    -- @run:6 Write output and report ratio
     -- wraps across two lines so `:N` count must include the continuation
     local f = open(OUTPUT, "w")
     f:write(markdown)
