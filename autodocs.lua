@@ -579,21 +579,15 @@ local function process_file(filepath)
     total_input = total_input + ln
 end
 
--- @run:77 Render `records` into grouped markdown
+-- @run:76 Render `records` into grouped markdown
 -- with blockquotes for text and fenced code blocks for subjects
-local function render_markdown()
+local function render_markdown(grouped)
     local out = {}
     local function w(s) out[#out + 1] = s end
 
     w(fmt("# %s\n\n", TITLE))
 
-    local function render_section(prefix)
-        local entries = {}
-        for _, r in ipairs(records) do
-            if r.tag == prefix then
-                entries[#entries + 1] = r
-            end
-        end
+    local function render_section(entries, prefix)
         if #entries == 0 then return end
 
         w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
@@ -650,10 +644,10 @@ local function render_markdown()
         end
     end
 
-    render_section("CHK")
-    render_section("DEF")
-    render_section("RUN")
-    render_section("ERR")
+    render_section(grouped.CHK, "CHK")
+    render_section(grouped.DEF, "DEF")
+    render_section(grouped.RUN, "RUN")
+    render_section(grouped.ERR, "ERR")
 
     return concat(out)
 end
@@ -712,21 +706,27 @@ local function main()
         return
     end
 
-    -- @run Resolve parents, assign indices and anchors (single pass)
+    -- @run Resolve parents, assign indices, group by tag (single pass)
     local cf = {CHK="", DEF="", RUN="", ERR=""}
     local mi = {CHK=0, DEF=0, RUN=0, ERR=0}
     local si = {CHK=0, DEF=0, RUN=0, ERR=0}
+    local grouped = {CHK={}, DEF={}, RUN={}, ERR={}}
+    local scope = {}
+    local scope_file = ""
     for i, r in ipairs(records) do
+        if r.file ~= scope_file then
+            scope_file = r.file
+            scope = {}
+        end
         if r.indent > 0 then
-            for j = i - 1, 1, -1 do
-                local rj = records[j]
-                if rj.file == r.file and rj.indent < r.indent then
-                    r.parent = rj
-                    break
-                end
+            for d = r.indent - 1, 0, -1 do
+                if scope[d] then r.parent = scope[d]; break end
             end
         end
+        scope[r.indent] = r
         local t = r.tag
+        local g = grouped[t]
+        g[#g + 1] = r
         if cf[t] ~= r.file then
             cf[t] = r.file
             mi[t] = mi[t] + 1
@@ -743,7 +743,7 @@ local function main()
 
     -- @chk:10 Render and compare against existing output
     -- skip write if content is unchanged
-    local markdown = render_markdown()
+    local markdown = render_markdown(grouped)
     local ef = open(OUTPUT, "r")
     if ef then
         local existing = ef:read("*a")
