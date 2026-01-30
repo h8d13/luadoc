@@ -61,6 +61,7 @@ if sub(SCAN_DIR, 1, 1) ~= "/" then
     if ef then ef:close() end
     SCAN_DIR = (SCAN_DIR == ".") and cwd or cwd .. "/" .. SCAN_DIR
 end
+local HOME = match(SCAN_DIR, "^(/[^/]+/[^/]+)")
 local US = "\031"
 
 -- @run:6 Strip leading spaces and tabs via byte scan
@@ -129,6 +130,10 @@ local TAGS = {"@def", "@chk", "@run", "@err"}
 -- @def:1 Map `!x` suffixes to admonition types
 local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
 
+-- @def:2 Map tag prefixes to anchor slugs and section titles
+local TAG_SEC   = {CHK="chk", DEF="def", RUN="run", ERR="err"}
+local TAG_TITLE = {CHK="Checks", DEF="Defines", RUN="Runners", ERR="Errors"}
+
 -- @chk:4 Extract `!x` admonition suffix from tag syntax
 local function get_admonition(text)
     local code = match(text, "@%a+:?%d*!(%a)")
@@ -187,30 +192,35 @@ end
 -- @run Strip comment delimiters and extract inner text
 -- for all styles including block continuations
 local function strip_comment(line, style)
+    -- @chk shell type comments
     if style == "hash" then
         local sc = match(line, "#(.*)") or ""
         return trim_lead(sc)
-
+    -- @chk double-slash comments
     elseif style == "dslash" then
         local sc = match(line, "//(.*)") or ""
         return trim_lead(sc)
 
+    -- @chk double-dash comments
     elseif style == "ddash" then
         local sc = match(line, "%-%-(.*)") or ""
         return trim_lead(sc)
 
+    -- @chk C-style block opening
     elseif style == "cblock" then
         local sc = match(line, "/%*(.*)") or ""
         sc = trim_trail(sc)
         if sub(sc, -2) == "*/" then sc = sub(sc, 1, -3) end
         return trim(sc)
 
+    -- @chk HTML comment opening
     elseif style == "html" then
         local sc = match(line, "<!%-%-(.*)") or ""
         sc = trim_trail(sc)
         if sub(sc, -3) == "-->" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
+    -- @chk block comment continuation lines
     elseif style == "cblock_cont" then
         local sc = trim_trail(line)
         if sub(sc, -2) == "*/" then sc = sub(sc, 1, -3) end
@@ -221,11 +231,13 @@ local function strip_comment(line, style)
         end
         return trim_trail(sc)
 
+    -- @chk html closing
     elseif style == "html_cont" then
         local sc = trim_trail(line)
         if sub(sc, -3) == "-->" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
+    -- @chk triple-quote docstring styles
     elseif style == "dquote" then
         local sc = match(line, '"""(.*)') or ""
         sc = trim_trail(sc)
@@ -238,6 +250,8 @@ local function strip_comment(line, style)
         if sub(sc, -3) == "'''" then sc = sub(sc, 1, -4) end
         return trim(sc)
 
+    -- @chk docstring continuation lines
+    -- no opening delimiter to strip; checks both `"""` and `'''` closers
     elseif style == "docstring_cont" then
         local sc = trim_trail(line)
         if sub(sc, -3) == '"""' then
@@ -299,10 +313,10 @@ local function process_file(filepath)
     local content = f:read("*a")
     f:close()
 
-    -- @def:14 Initialize per-file state machine variables
+    -- @def:15 Initialize per-file state machine variables
     -- `get_lang` receives first line to avoid reopening the file
     local first   = match(content, "^([^\n]*)")
-    local rel     = filepath
+    local rel     = HOME and sub(filepath, 1, #HOME) == HOME and "~" .. sub(filepath, #HOME + 1) or filepath
     local lang    = get_lang(filepath, first)
     local ln      = 0
     local state   = ""
@@ -315,8 +329,9 @@ local function process_file(filepath)
     local subj    = ""
     local adm     = nil
     local pending = nil
+    local tag_indent = 0
 
-    -- @run:33!n Emit a documentation record or defer for subject capture
+    -- @run:37!n Emit a documentation record or defer for subject capture
     -- `lang` is passed through as-is, empty string means no fence label
     local function emit()
         if tag ~= "" and text ~= "" then
@@ -325,21 +340,25 @@ local function process_file(filepath)
                 if nsubj > 0 then
                     pending = {
                         tag  = tag,
+                        file = rel,
                         loc  = rel .. ":" .. start,
                         text = tr,
                         lang = lang,
                         adm  = adm,
+                        indent = tag_indent,
                     }
                     cap_want = nsubj
                     subj = ""
                 else
                     records[#records + 1] = {
                         tag  = tag,
+                        file = rel,
                         loc  = rel .. ":" .. start,
                         text = tr,
                         lang = lang,
                         subj = "",
                         adm  = adm,
+                        indent = tag_indent,
                     }
                 end
             end
@@ -372,7 +391,7 @@ local function process_file(filepath)
         pos = nl + 1
         ln = ln + 1
 
-        -- Subject line capture mode
+        -- @run Subject line capture mode
         if capture > 0 then
             if subj ~= "" then
                 subj = subj .. US .. line
@@ -384,7 +403,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Inside a C-style block comment with tag
+        -- @run Accumulate C-style block comment with tag
         if state == "cblock" then
             if find(line, "*/", 1, true) then
                 local sc = strip_comment(line, "cblock_cont")
@@ -397,7 +416,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Inside an HTML comment with tag
+        -- @run Accumulate HTML comment with tag
         if state == "html" then
             if find(line, "-->", 1, true) then
                 local sc = strip_comment(line, "html_cont")
@@ -410,7 +429,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Scanning a block comment for a tag
+        -- @chk Scan untagged block comment for tags
         if state == "cblock_scan" then
             if find(line, "*/", 1, true) then
                 state = ""
@@ -418,6 +437,7 @@ local function process_file(filepath)
                 if has_tag(line) then
                     tag   = get_tag(line)
                     start = tostring(ln)
+                    local ti = 1; while byte(line,ti) == 32 or byte(line,ti) == 9 do ti = ti+1 end; tag_indent = ti-1
                     local sc = strip_comment(line, "cblock_cont")
                     nsubj = get_subject_count(sc)
                     adm   = get_admonition(sc)
@@ -428,7 +448,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Scanning an HTML comment for a tag
+        -- @chk Scan untagged HTML comment for tags
         if state == "html_scan" then
             if find(line, "-->", 1, true) then
                 state = ""
@@ -436,6 +456,7 @@ local function process_file(filepath)
                 if has_tag(line) then
                     tag   = get_tag(line)
                     start = tostring(ln)
+                    local ti = 1; while byte(line,ti) == 32 or byte(line,ti) == 9 do ti = ti+1 end; tag_indent = ti-1
                     local sc = strip_comment(line, "html_cont")
                     nsubj = get_subject_count(sc)
                     adm   = get_admonition(sc)
@@ -446,7 +467,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Inside a docstring with tag
+        -- @run Accumulate docstring with tag
         if state == "dquote" or state == "squote" then
             local close = (state == "dquote") and '"""' or "'''"
             if find(line, close, 1, true) then
@@ -460,7 +481,7 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Scanning a docstring for a tag
+        -- @chk Scan untagged docstring for tags
         if state == "dquote_scan" or state == "squote_scan" then
             local close, promote
             if state == "dquote_scan" then
@@ -474,6 +495,7 @@ local function process_file(filepath)
                 if has_tag(line) then
                     tag   = get_tag(line)
                     start = tostring(ln)
+                    local ti = 1; while byte(line,ti) == 32 or byte(line,ti) == 9 do ti = ti+1 end; tag_indent = ti-1
                     local sc = strip_comment(line, "docstring_cont")
                     nsubj = get_subject_count(sc)
                     adm   = get_admonition(sc)
@@ -484,10 +506,10 @@ local function process_file(filepath)
             goto continue
         end
 
-        -- Default: detect comment style of current line
+        -- @chk Detect comment style of current line
         local style = detect_style(line)
 
-        -- Continue existing single-line comment block
+        -- @run Continue or close existing single-line comment block
         if state ~= "" then
             if style == state then
                 if has_tag(line) then
@@ -502,10 +524,11 @@ local function process_file(filepath)
             end
         end
 
-        -- New tagged comment
+        -- @run Dispatch new tagged comment by style
         if has_tag(line) and style ~= "none" then
             tag   = get_tag(line)
             start = tostring(ln)
+            local ti = 1; while byte(line,ti) == 32 or byte(line,ti) == 9 do ti = ti+1 end; tag_indent = ti-1
             local sc = strip_comment(line, style)
             nsubj = get_subject_count(sc)
             adm   = get_admonition(sc)
@@ -525,7 +548,7 @@ local function process_file(filepath)
                 if rest and find(rest, "'''", 1, true) then emit() else state = "squote" end
             end
 
-        -- Untagged block comment start - scan for tags
+        -- @chk Untagged block comment start - scan for tags
         elseif style == "cblock" then
             if not find(line, "*/", 1, true) then state = "cblock_scan" end
         elseif style == "html" then
@@ -538,7 +561,7 @@ local function process_file(filepath)
             if not (rest and find(rest, "'''", 1, true)) then state = "squote_scan" end
         end
 
-        -- Begin subject capture if we're waiting and hit a code line
+        -- @run Begin subject capture if waiting and hit a code line
         if cap_want > 0 and style == "none" then
             capture  = cap_want
             cap_want = 0
@@ -556,7 +579,7 @@ local function process_file(filepath)
     total_input = total_input + ln
 end
 
--- @run:73 Render `records` into grouped markdown
+-- @run:77 Render `records` into grouped markdown
 -- with blockquotes for text and fenced code blocks for subjects
 local function render_markdown()
     local out = {}
@@ -564,7 +587,7 @@ local function render_markdown()
 
     w(fmt("# %s\n\n", TITLE))
 
-    local function render_section(prefix, title, label)
+    local function render_section(prefix)
         local entries = {}
         for _, r in ipairs(records) do
             if r.tag == prefix then
@@ -573,10 +596,14 @@ local function render_markdown()
         end
         if #entries == 0 then return end
 
-        w(fmt("## %s (%s)\n\n", title, label))
+        w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
         for _, r in ipairs(entries) do
-            w(fmt("### `%s`\n", r.loc))
+            w(fmt('<a id="%s"></a>\n', r.anchor))
+            w(fmt("### %s %s\n", r.idx, r.loc))
+            if r.parent and r.parent.anchor then
+                w(fmt("*↳ [%s %s](#%s)*\n\n", r.parent.sec_title, r.parent.idx, r.parent.anchor))
+            end
 
             -- Render text lines: admonition or first-plain/rest-blockquote
             if r.adm then
@@ -624,10 +651,10 @@ local function render_markdown()
         end
     end
 
-    render_section("CHK", "Checks", "@chk")
-    render_section("DEF", "Defines", "@def")
-    render_section("RUN", "Runners", "@run")
-    render_section("ERR", "Errors", "@err")
+    render_section("CHK")
+    render_section("DEF")
+    render_section("RUN")
+    render_section("ERR")
 
     return concat(out)
 end
@@ -656,7 +683,7 @@ local function main()
 
     -- @chk Verify tagged files were discovered
     if #files == 0 then
-        -- @err:3 Handle missing tagged files
+        -- @err:5 Handle missing tagged files
         -- with empty output and `stderr` warning
         local f = open(OUTPUT, "w")
         f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
@@ -677,13 +704,42 @@ local function main()
 
     -- @chk Verify extraction produced results
     if #records == 0 then
-        -- @err:3 Handle extraction failure
+        -- @err:5 Handle extraction failure
         -- with empty output and `stderr` warning
         local f = open(OUTPUT, "w")
         f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
         f:close()
         io.stderr:write(fmt("autodocs: tags found but no extractable docs under %s\n", SCAN_DIR))
         return
+    end
+
+    -- @run Resolve parents, assign indices and anchors (single pass)
+    local cf = {CHK="", DEF="", RUN="", ERR=""}
+    local mi = {CHK=0, DEF=0, RUN=0, ERR=0}
+    local si = {CHK=0, DEF=0, RUN=0, ERR=0}
+    for i, r in ipairs(records) do
+        if r.indent > 0 then
+            for j = i - 1, 1, -1 do
+                local rj = records[j]
+                if rj.file == r.file and rj.indent < r.indent then
+                    r.parent = rj
+                    break
+                end
+            end
+        end
+        local t = r.tag
+        if cf[t] ~= r.file then
+            cf[t] = r.file
+            mi[t] = mi[t] + 1
+            si[t] = 0
+            r.idx = fmt("%d.", mi[t])
+            r.anchor = fmt("%s-%d", TAG_SEC[t], mi[t])
+        else
+            si[t] = si[t] + 1
+            r.idx = fmt("%d.%d", mi[t], si[t])
+            r.anchor = fmt("%s-%d-%d", TAG_SEC[t], mi[t], si[t])
+        end
+        r.sec_title = TAG_TITLE[t]
     end
 
     -- @chk:10 Render and compare against existing output
@@ -708,7 +764,7 @@ local function main()
     io.stderr:write(fmt("autodocs: wrote %s (%d/%d = %d%%)\n",
         OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
 
-    -- @run:5 Run `stats.awk` on the output if `-s` flag is set
+    -- @run:9 Run `stats.awk` on the output if `-s` flag is set
     if STATS then
         local script_dir = match(arg[0], "^(.*/)") or "./"
         local stats_awk = script_dir .. "stats.awk"
