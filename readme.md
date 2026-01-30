@@ -1,10 +1,230 @@
 # Autodocs
 
-### <a id="s-1"></a>1. @chk ~/Desktop/Bin/autodocs.lua:2
+## Checks (@chk)
+
+### <a id="chk-1"></a>1. ~/Desktop/Bin/autodocs.lua:2
 `-s` outputs extra stats
 
 
-### <a id="s-2"></a>2. @def ~/Desktop/Bin/autodocs.lua:10
+### <a id="chk-2"></a>2. ~/Desktop/Bin/autodocs.lua:89
+Test whether a line contains any documentation tag
+
+> early `@` check short-circuits lines with no tags
+
+```lua
+local function has_tag(line)
+    if not find(line, "@", 1, true) then return nil end
+    return find(line, "@def", 1, true) or find(line, "@chk", 1, true) or
+           find(line, "@run", 1, true) or find(line, "@err", 1, true)
+end
+```
+
+### <a id="chk-3"></a>3. ~/Desktop/Bin/autodocs.lua:97
+Classify a tagged line into `DEF`, `CHK`, `RUN`, or `ERR`
+
+```lua
+local function get_tag(line)
+    if     find(line, "@def", 1, true) then return "DEF"
+    elseif find(line, "@chk", 1, true) then return "CHK"
+    elseif find(line, "@run", 1, true) then return "RUN"
+    elseif find(line, "@err", 1, true) then return "ERR"
+    end
+end
+```
+
+### <a id="chk-4"></a>4. ~/Desktop/Bin/autodocs.lua:106
+Extract the subject line count from `@tag:N` syntax
+
+> using pattern capture after the colon
+
+```lua
+local function get_subject_count(text)
+    local n = match(text, "@def:(%d+)") or match(text, "@chk:(%d+)") or
+              match(text, "@run:(%d+)") or match(text, "@err:(%d+)")
+    return tonumber(n) or 0
+end
+```
+
+### <a id="chk-5"></a>5. ~/Desktop/Bin/autodocs.lua:136
+Extract `!x` admonition suffix from tag syntax
+
+```lua
+local function get_admonition(text)
+    local code = match(text, "@%a+:?%d*!(%a)")
+    if code then return ADMONITIONS[code] end
+end
+```
+
+### <a id="chk-6"></a>6. ~/Desktop/Bin/autodocs.lua:167
+Detect comment style via byte-level prefix check
+
+> skips leading whitespace without allocating a trimmed copy
+
+```lua
+local function detect_style(line)
+    local i = 1
+    while byte(line, i) == 32 or byte(line, i) == 9 do i = i + 1 end
+    local b = byte(line, i)
+    if not b then return "none" end
+    if b == 60 then -- '<'
+        if sub(line, i, i + 3) == "<!--" then return "html" end
+    elseif b == 47 then -- '/'
+        local b2 = byte(line, i + 1)
+        if b2 == 42 then return "cblock" end
+        if b2 == 47 then return "dslash" end
+    elseif b == 35 then return "hash"
+    elseif b == 34 then -- '"'
+        if sub(line, i, i + 2) == '"""' then return "dquote" end
+    elseif b == 39 then -- "'"
+        if sub(line, i, i + 2) == "'''" then return "squote" end
+    elseif b == 45 then -- '-'
+        if byte(line, i + 1) == 45 then return "ddash" end
+    end
+    return "none"
+end
+```
+
+<a id="chk-7"></a>**7. ~/Desktop/Bin/autodocs.lua:194**
+*↳ [@run 6.](#run-6)*
+
+shell type comments
+
+
+<a id="chk-8"></a>**8. ~/Desktop/Bin/autodocs.lua:198**
+*↳ [@run 6.](#run-6)*
+
+double-slash comments
+
+
+<a id="chk-9"></a>**9. ~/Desktop/Bin/autodocs.lua:203**
+*↳ [@run 6.](#run-6)*
+
+double-dash comments
+
+
+<a id="chk-10"></a>**10. ~/Desktop/Bin/autodocs.lua:208**
+*↳ [@run 6.](#run-6)*
+
+C-style block opening
+
+
+<a id="chk-11"></a>**11. ~/Desktop/Bin/autodocs.lua:215**
+*↳ [@run 6.](#run-6)*
+
+HTML comment opening
+
+
+<a id="chk-12"></a>**12. ~/Desktop/Bin/autodocs.lua:222**
+*↳ [@run 6.](#run-6)*
+
+block comment continuation lines
+
+
+<a id="chk-13"></a>**13. ~/Desktop/Bin/autodocs.lua:233**
+*↳ [@run 6.](#run-6)*
+
+html closing
+
+
+<a id="chk-14"></a>**14. ~/Desktop/Bin/autodocs.lua:239**
+*↳ [@run 6.](#run-6)*
+
+triple-quote docstring styles
+
+
+<a id="chk-15"></a>**15. ~/Desktop/Bin/autodocs.lua:252**
+*↳ [@run 6.](#run-6)*
+
+docstring continuation lines
+
+> no opening delimiter to strip; checks both `"""` and `'''` closers
+
+
+### <a id="chk-16"></a>16. ~/Desktop/Bin/autodocs.lua:286
+Classify file language via extension or shebang
+
+> accepts `first_line` to avoid reopening the file
+
+```lua
+local function get_lang(filepath, first_line)
+    local ext = match(filepath, "%.([^%.]+)$")
+    if ext and ext_map[ext] then return ext_map[ext] end
+    if first_line and sub(first_line, 1, 3) == "#!/" then
+        for _, pair in ipairs(shebang_map) do
+            if find(first_line, pair[1], 1, true) then
+                return pair[2]
+            end
+        end
+    end
+    return ""
+end
+```
+
+<a id="chk-17"></a>**17. ~/Desktop/Bin/autodocs.lua:431**
+*↳ [@run 7.2](#run-7-2)*
+
+Scan untagged block comment for tags
+
+
+<a id="chk-18"></a>**18. ~/Desktop/Bin/autodocs.lua:450**
+*↳ [@run 7.2](#run-7-2)*
+
+Scan untagged HTML comment for tags
+
+
+<a id="chk-19"></a>**19. ~/Desktop/Bin/autodocs.lua:483**
+*↳ [@run 7.2](#run-7-2)*
+
+Scan untagged docstring for tags
+
+
+<a id="chk-20"></a>**20. ~/Desktop/Bin/autodocs.lua:508**
+*↳ [@run 7.2](#run-7-2)*
+
+Detect comment style of current line
+
+
+<a id="chk-21"></a>**21. ~/Desktop/Bin/autodocs.lua:550**
+*↳ [@run 7.2](#run-7-2)*
+
+Untagged block comment start - scan for tags
+
+
+<a id="chk-22"></a>**22. ~/Desktop/Bin/autodocs.lua:674**
+*↳ [@run 9.](#run-9)*
+
+Verify tagged files were discovered
+
+
+<a id="chk-23"></a>**23. ~/Desktop/Bin/autodocs.lua:695**
+*↳ [@run 9.](#run-9)*
+
+Verify extraction produced results
+
+
+<a id="chk-24"></a>**24. ~/Desktop/Bin/autodocs.lua:743**
+*↳ [@run 9.](#run-9)*
+
+Render and compare against existing output
+
+> skip write if content is unchanged
+
+```lua
+    local markdown = render_markdown(grouped)
+    local ef = open(OUTPUT, "r")
+    if ef then
+        local existing = ef:read("*a")
+        ef:close()
+        if existing == markdown then
+            io.stderr:write(fmt("autodocs: %s unchanged\n", OUTPUT))
+            return
+        end
+    end
+```
+
+## Defines (@def)
+
+### <a id="def-1"></a>1. ~/Desktop/Bin/autodocs.lua:10
 > [!IMPORTANT]
 > Defines with 9 line of subject
 
@@ -32,7 +252,7 @@ print('luadoc is awesome')
     ---- handle errors with more definitions
 ```
 
-### <a id="s-3"></a>3. @def ~/Desktop/Bin/autodocs.lua:31
+### <a id="def-2"></a>2. ~/Desktop/Bin/autodocs.lua:31
 Localize `string.*`, `table.*`, and `io.*` functions
 
 > bypasses metatable and global lookups in the hot loop
@@ -49,7 +269,7 @@ local concat = table.concat
 local open   = io.open
 ```
 
-### <a id="s-4"></a>4. @def ~/Desktop/Bin/autodocs.lua:43
+### <a id="def-3"></a>3. ~/Desktop/Bin/autodocs.lua:43
 > [!NOTE]
 > Shell-escape a string for safe interpolation into `io.popen`
 
@@ -61,7 +281,7 @@ local function shell_quote(s)
 end
 ```
 
-### <a id="s-5"></a>5. @def ~/Desktop/Bin/autodocs.lua:49
+### <a id="def-4"></a>4. ~/Desktop/Bin/autodocs.lua:49
 Parse CLI args with defaults
 
 > strip trailing slash, resolve absolute path via `/proc/self/environ`
@@ -84,7 +304,107 @@ local HOME = match(SCAN_DIR, "^(/[^/]+/[^/]+)")
 local US = "\031"
 ```
 
-### <a id="s-6"></a>6. @run ~/Desktop/Bin/autodocs.lua:66
+### <a id="def-5"></a>5. ~/Desktop/Bin/autodocs.lua:126
+Hoisted `TAGS` table avoids per-call allocation in `strip_tags`
+
+```lua
+local TAGS = {"@def", "@chk", "@run", "@err"}
+```
+
+### <a id="def-6"></a>6. ~/Desktop/Bin/autodocs.lua:129
+Map `!x` suffixes to admonition types
+
+```lua
+local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
+```
+
+### <a id="def-7"></a>7. ~/Desktop/Bin/autodocs.lua:132
+Map tag prefixes to anchor slugs and section titles
+
+```lua
+local TAG_SEC   = {CHK="chk", DEF="def", RUN="run", ERR="err"}
+local TAG_TITLE = {CHK="Checks", DEF="Defines", RUN="Runners", ERR="Errors"}
+```
+
+### <a id="def-8"></a>8. ~/Desktop/Bin/autodocs.lua:266
+Map file extension to fenced code block language
+
+```lua
+local ext_map = {
+    sh="sh", bash="sh", py="python",
+    js="javascript", mjs="javascript", cjs="javascript",
+    ts="typescript", mts="typescript", cts="typescript",
+    jsx="jsx", tsx="tsx", rb="ruby", go="go", rs="rust",
+    c="c", h="c", cpp="cpp", hpp="cpp", cc="cpp", cxx="cpp",
+    java="java", cs="csharp", swift="swift", kt="kotlin", kts="kotlin",
+    lua="lua", sql="sql", html="html", htm="html", css="css", xml="xml",
+    yaml="yaml", yml="yaml", toml="toml", json="json",
+    php="php", pl="perl", pm="perl", zig="zig",
+    hs="haskell", ex="elixir", exs="elixir", erl="erlang",
+}
+```
+
+### <a id="def-9"></a>9. ~/Desktop/Bin/autodocs.lua:280
+Map shebang interpreters to fenced code block language
+
+```lua
+local shebang_map = {
+    {"python", "python"}, {"node", "javascript"}, {"ruby", "ruby"},
+    {"perl", "perl"}, {"lua", "lua"}, {"php", "php"}, {"sh", "sh"},
+}
+```
+
+### <a id="def-10"></a>10. ~/Desktop/Bin/autodocs.lua:301
+Global state for collected records and line count
+
+```lua
+local records = {}
+local total_input = 0
+```
+
+<a id="def-11"></a>**11. ~/Desktop/Bin/autodocs.lua:308**
+*↳ [@run 7.](#run-7)*
+
+> [!NOTE]
+> Bulk-read file first so `get_lang` reuses the buffer
+
+avoids a second `open`+`read` just for shebang detection
+
+```lua
+    local f = open(filepath, "r")
+    if not f then return end
+    local content = f:read("*a")
+    f:close()
+```
+
+<a id="def-12"></a>**12. ~/Desktop/Bin/autodocs.lua:315**
+*↳ [@run 7.](#run-7)*
+
+Initialize per-file state machine variables
+
+> `get_lang` receives first line to avoid reopening the file
+
+```lua
+    local first   = match(content, "^([^\n]*)")
+    local rel     = HOME and sub(filepath, 1, #HOME) == HOME and "~" .. sub(filepath, #HOME + 1) or filepath
+    local lang    = get_lang(filepath, first)
+    local ln      = 0
+    local state   = ""
+    local tag     = ""
+    local start   = ""
+    local text    = ""
+    local nsubj   = 0
+    local cap_want = 0
+    local capture = 0
+    local subj    = ""
+    local adm     = nil
+    local pending = nil
+    local tag_indent = 0
+```
+
+## Runners (@run)
+
+### <a id="run-1"></a>1. ~/Desktop/Bin/autodocs.lua:66
 Strip leading spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -98,7 +418,7 @@ local function trim_lead(s)
 end
 ```
 
-### <a id="s-7"></a>7. @run ~/Desktop/Bin/autodocs.lua:75
+### <a id="run-2"></a>2. ~/Desktop/Bin/autodocs.lua:75
 Strip trailing spaces and tabs via byte scan
 
 > returns original string when no trimming needed
@@ -112,7 +432,7 @@ local function trim_trail(s)
 end
 ```
 
-### <a id="s-8"></a>8. @run ~/Desktop/Bin/autodocs.lua:84
+### <a id="run-3"></a>3. ~/Desktop/Bin/autodocs.lua:84
 Trim both ends via `trim_lead` and `trim_trail`
 
 ```lua
@@ -121,46 +441,7 @@ local function trim(s)
 end
 ```
 
-### <a id="s-9"></a>9. @chk ~/Desktop/Bin/autodocs.lua:89
-Test whether a line contains any documentation tag
-
-> early `@` check short-circuits lines with no tags
-
-```lua
-local function has_tag(line)
-    if not find(line, "@", 1, true) then return nil end
-    return find(line, "@def", 1, true) or find(line, "@chk", 1, true) or
-           find(line, "@run", 1, true) or find(line, "@err", 1, true)
-end
-```
-
-### <a id="s-10"></a>10. @chk ~/Desktop/Bin/autodocs.lua:97
-Classify a tagged line into `DEF`, `CHK`, `RUN`, or `ERR`
-
-```lua
-local function get_tag(line)
-    if     find(line, "@def", 1, true) then return "DEF"
-    elseif find(line, "@chk", 1, true) then return "CHK"
-    elseif find(line, "@run", 1, true) then return "RUN"
-    elseif find(line, "@err", 1, true) then return "ERR"
-    end
-end
-```
-
-### <a id="s-11"></a>11. @chk ~/Desktop/Bin/autodocs.lua:106
-Extract the subject line count from `@tag:N` syntax
-
-> using pattern capture after the colon
-
-```lua
-local function get_subject_count(text)
-    local n = match(text, "@def:(%d+)") or match(text, "@chk:(%d+)") or
-              match(text, "@run:(%d+)") or match(text, "@err:(%d+)")
-    return tonumber(n) or 0
-end
-```
-
-### <a id="s-12"></a>12. @run ~/Desktop/Bin/autodocs.lua:114
+### <a id="run-4"></a>4. ~/Desktop/Bin/autodocs.lua:114
 Strip `@tag:N` and trailing digits from text
 
 > rejoining prefix with remaining content
@@ -177,38 +458,7 @@ local function strip_tag_num(text, tag)
 end
 ```
 
-### <a id="s-13"></a>13. @def ~/Desktop/Bin/autodocs.lua:126
-Hoisted `TAGS` table avoids per-call allocation in `strip_tags`
-
-```lua
-local TAGS = {"@def", "@chk", "@run", "@err"}
-```
-
-### <a id="s-14"></a>14. @def ~/Desktop/Bin/autodocs.lua:129
-Map `!x` suffixes to admonition types
-
-```lua
-local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
-```
-
-### <a id="s-15"></a>15. @def ~/Desktop/Bin/autodocs.lua:132
-Map tag prefixes to anchor slugs for badges
-
-```lua
-local TAG_SEC = {CHK="chk", DEF="def", RUN="run", ERR="err"}
-```
-
-### <a id="s-16"></a>16. @chk ~/Desktop/Bin/autodocs.lua:135
-Extract `!x` admonition suffix from tag syntax
-
-```lua
-local function get_admonition(text)
-    local code = match(text, "@%a+:?%d*!(%a)")
-    if code then return ADMONITIONS[code] end
-end
-```
-
-### <a id="s-17"></a>17. @run ~/Desktop/Bin/autodocs.lua:141
+### <a id="run-5"></a>5. ~/Desktop/Bin/autodocs.lua:142
 Remove `@tag`, `@tag:N`, or `@tag!x` syntax from comment text
 
 > delegates to `strip_tag_num` for `:N` and `:N!x` variants
@@ -238,201 +488,20 @@ local function strip_tags(text)
 end
 ```
 
-### <a id="s-18"></a>18. @chk ~/Desktop/Bin/autodocs.lua:166
-Detect comment style via byte-level prefix check
-
-> skips leading whitespace without allocating a trimmed copy
-
-```lua
-local function detect_style(line)
-    local i = 1
-    while byte(line, i) == 32 or byte(line, i) == 9 do i = i + 1 end
-    local b = byte(line, i)
-    if not b then return "none" end
-    if b == 60 then -- '<'
-        if sub(line, i, i + 3) == "<!--" then return "html" end
-    elseif b == 47 then -- '/'
-        local b2 = byte(line, i + 1)
-        if b2 == 42 then return "cblock" end
-        if b2 == 47 then return "dslash" end
-    elseif b == 35 then return "hash"
-    elseif b == 34 then -- '"'
-        if sub(line, i, i + 2) == '"""' then return "dquote" end
-    elseif b == 39 then -- "'"
-        if sub(line, i, i + 2) == "'''" then return "squote" end
-    elseif b == 45 then -- '-'
-        if byte(line, i + 1) == 45 then return "ddash" end
-    end
-    return "none"
-end
-```
-
-### <a id="s-19"></a>19. @run ~/Desktop/Bin/autodocs.lua:190
+### <a id="run-6"></a>6. ~/Desktop/Bin/autodocs.lua:191
 Strip comment delimiters and extract inner text
 
 > for all styles including block continuations
 
 
-<a id="s-19-1"></a>**19.1 @chk ~/Desktop/Bin/autodocs.lua:193**
-*↳ [@run 19.](#s-19)*
-
-shell type comments
-
-
-<a id="s-19-2"></a>**19.2 @chk ~/Desktop/Bin/autodocs.lua:197**
-*↳ [@run 19.](#s-19)*
-
-double-slash comments
-
-
-<a id="s-19-3"></a>**19.3 @chk ~/Desktop/Bin/autodocs.lua:202**
-*↳ [@run 19.](#s-19)*
-
-double-dash comments
-
-
-<a id="s-19-4"></a>**19.4 @chk ~/Desktop/Bin/autodocs.lua:207**
-*↳ [@run 19.](#s-19)*
-
-C-style block opening
-
-
-<a id="s-19-5"></a>**19.5 @chk ~/Desktop/Bin/autodocs.lua:214**
-*↳ [@run 19.](#s-19)*
-
-HTML comment opening
-
-
-<a id="s-19-6"></a>**19.6 @chk ~/Desktop/Bin/autodocs.lua:221**
-*↳ [@run 19.](#s-19)*
-
-block comment continuation lines
-
-
-<a id="s-19-7"></a>**19.7 @chk ~/Desktop/Bin/autodocs.lua:232**
-*↳ [@run 19.](#s-19)*
-
-html closing
-
-
-<a id="s-19-8"></a>**19.8 @chk ~/Desktop/Bin/autodocs.lua:238**
-*↳ [@run 19.](#s-19)*
-
-triple-quote docstring styles
-
-
-<a id="s-19-9"></a>**19.9 @chk ~/Desktop/Bin/autodocs.lua:251**
-*↳ [@run 19.](#s-19)*
-
-docstring continuation lines
-
-> no opening delimiter to strip; checks both `"""` and `'''` closers
-
-
-### <a id="s-20"></a>20. @def ~/Desktop/Bin/autodocs.lua:265
-Map file extension to fenced code block language
-
-```lua
-local ext_map = {
-    sh="sh", bash="sh", py="python",
-    js="javascript", mjs="javascript", cjs="javascript",
-    ts="typescript", mts="typescript", cts="typescript",
-    jsx="jsx", tsx="tsx", rb="ruby", go="go", rs="rust",
-    c="c", h="c", cpp="cpp", hpp="cpp", cc="cpp", cxx="cpp",
-    java="java", cs="csharp", swift="swift", kt="kotlin", kts="kotlin",
-    lua="lua", sql="sql", html="html", htm="html", css="css", xml="xml",
-    yaml="yaml", yml="yaml", toml="toml", json="json",
-    php="php", pl="perl", pm="perl", zig="zig",
-    hs="haskell", ex="elixir", exs="elixir", erl="erlang",
-}
-```
-
-### <a id="s-21"></a>21. @def ~/Desktop/Bin/autodocs.lua:279
-Map shebang interpreters to fenced code block language
-
-```lua
-local shebang_map = {
-    {"python", "python"}, {"node", "javascript"}, {"ruby", "ruby"},
-    {"perl", "perl"}, {"lua", "lua"}, {"php", "php"}, {"sh", "sh"},
-}
-```
-
-### <a id="s-22"></a>22. @chk ~/Desktop/Bin/autodocs.lua:285
-Classify file language via extension or shebang
-
-> accepts `first_line` to avoid reopening the file
-
-```lua
-local function get_lang(filepath, first_line)
-    local ext = match(filepath, "%.([^%.]+)$")
-    if ext and ext_map[ext] then return ext_map[ext] end
-    if first_line and sub(first_line, 1, 3) == "#!/" then
-        for _, pair in ipairs(shebang_map) do
-            if find(first_line, pair[1], 1, true) then
-                return pair[2]
-            end
-        end
-    end
-    return ""
-end
-```
-
-### <a id="s-23"></a>23. @def ~/Desktop/Bin/autodocs.lua:300
-Global state for collected records and line count
-
-```lua
-local records = {}
-local total_input = 0
-```
-
-### <a id="s-24"></a>24. @run ~/Desktop/Bin/autodocs.lua:304
+### <a id="run-7"></a>7. ~/Desktop/Bin/autodocs.lua:305
 Walk one file as a line-by-line state machine
 
 > extracting tagged comments into `records` table
 
 
-<a id="s-24-1"></a>**24.1 @def ~/Desktop/Bin/autodocs.lua:307**
-*↳ [@run 24.](#s-24)*
-
-> [!NOTE]
-> Bulk-read file first so `get_lang` reuses the buffer
-
-avoids a second `open`+`read` just for shebang detection
-
-```lua
-    local f = open(filepath, "r")
-    if not f then return end
-    local content = f:read("*a")
-    f:close()
-```
-
-<a id="s-24-2"></a>**24.2 @def ~/Desktop/Bin/autodocs.lua:314**
-*↳ [@run 24.](#s-24)*
-
-Initialize per-file state machine variables
-
-> `get_lang` receives first line to avoid reopening the file
-
-```lua
-    local first   = match(content, "^([^\n]*)")
-    local rel     = HOME and sub(filepath, 1, #HOME) == HOME and "~" .. sub(filepath, #HOME + 1) or filepath
-    local lang    = get_lang(filepath, first)
-    local ln      = 0
-    local state   = ""
-    local tag     = ""
-    local start   = ""
-    local text    = ""
-    local nsubj   = 0
-    local cap_want = 0
-    local capture = 0
-    local subj    = ""
-    local adm     = nil
-    local pending = nil
-    local tag_indent = 0
-```
-
-<a id="s-24-3"></a>**24.3 @run ~/Desktop/Bin/autodocs.lua:332**
-*↳ [@run 24.](#s-24)*
+<a id="run-7-1"></a>**7.1 ~/Desktop/Bin/autodocs.lua:333**
+*↳ [@run 7.](#run-7)*
 
 > [!NOTE]
 > Emit a documentation record or defer for subject capture
@@ -479,8 +548,8 @@ Initialize per-file state machine variables
     end
 ```
 
-<a id="s-24-4"></a>**24.4 @run ~/Desktop/Bin/autodocs.lua:372**
-*↳ [@run 24.](#s-24)*
+<a id="run-7-2"></a>**7.2 ~/Desktop/Bin/autodocs.lua:373**
+*↳ [@run 7.](#run-7)*
 
 Flush deferred record with captured `subj` lines
 
@@ -496,154 +565,130 @@ Flush deferred record with captured `subj` lines
     end
 ```
 
-<a id="s-24-4-1"></a>**24.4.1 @run ~/Desktop/Bin/autodocs.lua:392**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-1"></a>**7.2.1 ~/Desktop/Bin/autodocs.lua:393**
+*↳ [@run 7.2](#run-7-2)*
 
 Subject line capture mode
 
 
-<a id="s-24-4-2"></a>**24.4.2 @run ~/Desktop/Bin/autodocs.lua:404**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-2"></a>**7.2.2 ~/Desktop/Bin/autodocs.lua:405**
+*↳ [@run 7.2](#run-7-2)*
 
 Accumulate C-style block comment with tag
 
 
-<a id="s-24-4-3"></a>**24.4.3 @run ~/Desktop/Bin/autodocs.lua:417**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-3"></a>**7.2.3 ~/Desktop/Bin/autodocs.lua:418**
+*↳ [@run 7.2](#run-7-2)*
 
 Accumulate HTML comment with tag
 
 
-<a id="s-24-4-4"></a>**24.4.4 @chk ~/Desktop/Bin/autodocs.lua:430**
-*↳ [@run 24.4](#s-24-4)*
-
-Scan untagged block comment for tags
-
-
-<a id="s-24-4-5"></a>**24.4.5 @chk ~/Desktop/Bin/autodocs.lua:449**
-*↳ [@run 24.4](#s-24-4)*
-
-Scan untagged HTML comment for tags
-
-
-<a id="s-24-4-6"></a>**24.4.6 @run ~/Desktop/Bin/autodocs.lua:468**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-4"></a>**7.2.4 ~/Desktop/Bin/autodocs.lua:469**
+*↳ [@run 7.2](#run-7-2)*
 
 Accumulate docstring with tag
 
 
-<a id="s-24-4-7"></a>**24.4.7 @chk ~/Desktop/Bin/autodocs.lua:482**
-*↳ [@run 24.4](#s-24-4)*
-
-Scan untagged docstring for tags
-
-
-<a id="s-24-4-8"></a>**24.4.8 @chk ~/Desktop/Bin/autodocs.lua:507**
-*↳ [@run 24.4](#s-24-4)*
-
-Detect comment style of current line
-
-
-<a id="s-24-4-9"></a>**24.4.9 @run ~/Desktop/Bin/autodocs.lua:510**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-5"></a>**7.2.5 ~/Desktop/Bin/autodocs.lua:511**
+*↳ [@run 7.2](#run-7-2)*
 
 Continue or close existing single-line comment block
 
 
-<a id="s-24-4-10"></a>**24.4.10 @run ~/Desktop/Bin/autodocs.lua:525**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-6"></a>**7.2.6 ~/Desktop/Bin/autodocs.lua:526**
+*↳ [@run 7.2](#run-7-2)*
 
 Dispatch new tagged comment by style
 
 
-<a id="s-24-4-11"></a>**24.4.11 @chk ~/Desktop/Bin/autodocs.lua:549**
-*↳ [@run 24.4](#s-24-4)*
-
-Untagged block comment start - scan for tags
-
-
-<a id="s-24-4-12"></a>**24.4.12 @run ~/Desktop/Bin/autodocs.lua:562**
-*↳ [@run 24.4](#s-24-4)*
+<a id="run-7-2-7"></a>**7.2.7 ~/Desktop/Bin/autodocs.lua:563**
+*↳ [@run 7.2](#run-7-2)*
 
 Begin subject capture if waiting and hit a code line
 
 
-### <a id="s-25"></a>25. @run ~/Desktop/Bin/autodocs.lua:580
-Render `records` into a single-tree markdown document
+### <a id="run-8"></a>8. ~/Desktop/Bin/autodocs.lua:581
+Render `records` into sectioned markdown
 
-> root entries become headings; children use bold anchors
+> parentless entries become headings; children use bold anchors
 
 ```lua
-local function render_markdown()
+local function render_markdown(grouped)
     local out = {}
     local function w(s) out[#out + 1] = s end
 
     w(fmt("# %s\n\n", TITLE))
 
-    for _, r in ipairs(records) do
-        local badge = TAG_SEC[r.tag]
-        if r.depth == 0 then
-            w(fmt('### <a id="%s"></a>%s @%s %s\n', r.anchor, r.idx, badge, r.loc))
-        else
-            w(fmt('<a id="%s"></a>**%s @%s %s**\n', r.anchor, r.idx, badge, r.loc))
-        end
+    local function render_section(entries, prefix)
+        if #entries == 0 then return end
+        w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
-        if r.parent then
-            w(fmt("*↳ [@%s %s](#%s)*\n\n", TAG_SEC[r.parent.tag], r.parent.idx, r.parent.anchor))
-        end
-
-        if r.adm then
-            local first_text = true
-            for tline in gmatch(r.text, "[^\031]+") do
-                local tr = trim(tline)
-                if tr ~= "" then
-                    if first_text then
-                        w(fmt("> [!%s]\n> %s\n\n", r.adm, tr))
-                        first_text = false
-                    else
-                        w(tr .. "\n\n")
-                    end
-                end
-            end
-        else
-            local first_text = true
-            for tline in gmatch(r.text, "[^\031]+") do
-                local tr = trim(tline)
-                if tr ~= "" then
-                    if first_text then
-                        w(tr .. "\n\n")
-                        first_text = false
-                    else
-                        w(fmt("> %s\n\n", tr))
-                    end
-                end
-            end
-        end
-
-        if r.subj and r.subj ~= "" then
-            if r.lang and r.lang ~= "" then
-                w(fmt("```%s\n", r.lang))
+        for _, r in ipairs(entries) do
+            if r.parent then
+                w(fmt('<a id="%s"></a>**%s %s**\n', r.anchor, r.idx, r.loc))
+                w(fmt("*↳ [@%s %s](#%s)*\n\n", TAG_SEC[r.parent.tag], r.parent.idx, r.parent.anchor))
             else
+                w(fmt('### <a id="%s"></a>%s %s\n', r.anchor, r.idx, r.loc))
+            end
+
+            if r.adm then
+                local first_text = true
+                for tline in gmatch(r.text, "[^\031]+") do
+                    local tr = trim(tline)
+                    if tr ~= "" then
+                        if first_text then
+                            w(fmt("> [!%s]\n> %s\n\n", r.adm, tr))
+                            first_text = false
+                        else
+                            w(tr .. "\n\n")
+                        end
+                    end
+                end
+            else
+                local first_text = true
+                for tline in gmatch(r.text, "[^\031]+") do
+                    local tr = trim(tline)
+                    if tr ~= "" then
+                        if first_text then
+                            w(tr .. "\n\n")
+                            first_text = false
+                        else
+                            w(fmt("> %s\n\n", tr))
+                        end
+                    end
+                end
+            end
+
+            if r.subj and r.subj ~= "" then
+                if r.lang and r.lang ~= "" then
+                    w(fmt("```%s\n", r.lang))
+                else
+                    w("```\n")
+                end
+                for sline in gmatch(r.subj .. "\031", "(.-)\031") do
+                    w(sline .. "\n")
+                end
                 w("```\n")
             end
-            for sline in gmatch(r.subj .. "\031", "(.-)\031") do
-                w(sline .. "\n")
-            end
-            w("```\n")
+            w("\n")
         end
-        w("\n")
     end
+
+    render_section(grouped.CHK, "CHK")
+    render_section(grouped.DEF, "DEF")
+    render_section(grouped.RUN, "RUN")
+    render_section(grouped.ERR, "ERR")
 
     return concat(out)
 end
 ```
 
-### <a id="s-26"></a>26. @run ~/Desktop/Bin/autodocs.lua:645
+### <a id="run-9"></a>9. ~/Desktop/Bin/autodocs.lua:652
 Main function
 
 
-<a id="s-26-1"></a>**26.1 @run ~/Desktop/Bin/autodocs.lua:647**
-*↳ [@run 26.](#s-26)*
+<a id="run-9-1"></a>**9.1 ~/Desktop/Bin/autodocs.lua:654**
+*↳ [@run 9.](#run-9)*
 
 Discover files containing documentation tags
 
@@ -669,29 +714,8 @@ Discover files containing documentation tags
     pipe:close()
 ```
 
-<a id="s-26-2"></a>**26.2 @chk ~/Desktop/Bin/autodocs.lua:667**
-*↳ [@run 26.](#s-26)*
-
-Verify tagged files were discovered
-
-
-<a id="s-26-2-1"></a>**26.2.1 @err ~/Desktop/Bin/autodocs.lua:669**
-*↳ [@chk 26.2](#s-26-2)*
-
-Handle missing tagged files
-
-> with empty output and `stderr` warning
-
-```lua
-        local f = open(OUTPUT, "w")
-        f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
-        f:close()
-        io.stderr:write(fmt("autodocs: no tags found under %s\n", SCAN_DIR))
-        return
-```
-
-<a id="s-26-3"></a>**26.3 @run ~/Desktop/Bin/autodocs.lua:681**
-*↳ [@run 26.](#s-26)*
+<a id="run-9-2"></a>**9.2 ~/Desktop/Bin/autodocs.lua:688**
+*↳ [@run 9.](#run-9)*
 
 Process all discovered files into intermediate `records`
 
@@ -703,55 +727,14 @@ Process all discovered files into intermediate `records`
     end
 ```
 
-<a id="s-26-4"></a>**26.4 @chk ~/Desktop/Bin/autodocs.lua:688**
-*↳ [@run 26.](#s-26)*
+<a id="run-9-3"></a>**9.3 ~/Desktop/Bin/autodocs.lua:706**
+*↳ [@run 9.](#run-9)*
 
-Verify extraction produced results
-
-
-<a id="s-26-4-1"></a>**26.4.1 @err ~/Desktop/Bin/autodocs.lua:690**
-*↳ [@chk 26.4](#s-26-4)*
-
-Handle extraction failure
-
-> with empty output and `stderr` warning
-
-```lua
-        local f = open(OUTPUT, "w")
-        f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
-        f:close()
-        io.stderr:write(fmt("autodocs: tags found but no extractable docs under %s\n", SCAN_DIR))
-        return
-```
-
-<a id="s-26-5"></a>**26.5 @run ~/Desktop/Bin/autodocs.lua:699**
-*↳ [@run 26.](#s-26)*
-
-Resolve parents and assign indices (single pass)
+Resolve parents, assign per-tag indices, group (single pass)
 
 
-<a id="s-26-6"></a>**26.6 @chk ~/Desktop/Bin/autodocs.lua:732**
-*↳ [@run 26.](#s-26)*
-
-Render and compare against existing output
-
-> skip write if content is unchanged
-
-```lua
-    local markdown = render_markdown()
-    local ef = open(OUTPUT, "r")
-    if ef then
-        local existing = ef:read("*a")
-        ef:close()
-        if existing == markdown then
-            io.stderr:write(fmt("autodocs: %s unchanged\n", OUTPUT))
-            return
-        end
-    end
-```
-
-<a id="s-26-7"></a>**26.7 @run ~/Desktop/Bin/autodocs.lua:745**
-*↳ [@run 26.](#s-26)*
+<a id="run-9-4"></a>**9.4 ~/Desktop/Bin/autodocs.lua:756**
+*↳ [@run 9.](#run-9)*
 
 Write output and report ratio
 
@@ -766,8 +749,8 @@ Write output and report ratio
         OUTPUT, ol, total_input, total_input > 0 and math.floor(ol * 100 / total_input) or 0))
 ```
 
-<a id="s-26-8"></a>**26.8 @run ~/Desktop/Bin/autodocs.lua:754**
-*↳ [@run 26.](#s-26)*
+<a id="run-9-5"></a>**9.5 ~/Desktop/Bin/autodocs.lua:765**
+*↳ [@run 9.](#run-9)*
 
 Run `stats.awk` on the output if `-s` flag is set
 
@@ -783,10 +766,42 @@ Run `stats.awk` on the output if `-s` flag is set
     end
 ```
 
-### <a id="s-27"></a>27. @run ~/Desktop/Bin/autodocs.lua:766
+### <a id="run-10"></a>10. ~/Desktop/Bin/autodocs.lua:777
 Entry point
 
 ```lua
 main()
+```
+
+## Errors (@err)
+
+<a id="err-1"></a>**1. ~/Desktop/Bin/autodocs.lua:676**
+*↳ [@chk 22.](#chk-22)*
+
+Handle missing tagged files
+
+> with empty output and `stderr` warning
+
+```lua
+        local f = open(OUTPUT, "w")
+        f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
+        f:close()
+        io.stderr:write(fmt("autodocs: no tags found under %s\n", SCAN_DIR))
+        return
+```
+
+<a id="err-2"></a>**2. ~/Desktop/Bin/autodocs.lua:697**
+*↳ [@chk 23.](#chk-23)*
+
+Handle extraction failure
+
+> with empty output and `stderr` warning
+
+```lua
+        local f = open(OUTPUT, "w")
+        f:write(fmt("# %s\n\nNo tagged documentation found.\n", TITLE))
+        f:close()
+        io.stderr:write(fmt("autodocs: tags found but no extractable docs under %s\n", SCAN_DIR))
+        return
 ```
 

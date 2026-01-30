@@ -129,8 +129,9 @@ local TAGS = {"@def", "@chk", "@run", "@err"}
 -- @def:1 Map `!x` suffixes to admonition types
 local ADMONITIONS = {n="NOTE", t="TIP", i="IMPORTANT", w="WARNING", c="CAUTION"}
 
--- @def:1 Map tag prefixes to anchor slugs for badges
-local TAG_SEC = {CHK="chk", DEF="def", RUN="run", ERR="err"}
+-- @def:2 Map tag prefixes to anchor slugs and section titles
+local TAG_SEC   = {CHK="chk", DEF="def", RUN="run", ERR="err"}
+local TAG_TITLE = {CHK="Checks", DEF="Defines", RUN="Runners", ERR="Errors"}
 
 -- @chk:4 Extract `!x` admonition suffix from tag syntax
 local function get_admonition(text)
@@ -577,67 +578,73 @@ local function process_file(filepath)
     total_input = total_input + ln
 end
 
--- @run:62 Render `records` into a single-tree markdown document
--- root entries become headings; children use bold anchors
-local function render_markdown()
+-- @run:68 Render `records` into sectioned markdown
+-- parentless entries become headings; children use bold anchors
+local function render_markdown(grouped)
     local out = {}
     local function w(s) out[#out + 1] = s end
 
     w(fmt("# %s\n\n", TITLE))
 
-    for _, r in ipairs(records) do
-        local badge = TAG_SEC[r.tag]
-        if r.depth == 0 then
-            w(fmt('### <a id="%s"></a>%s @%s %s\n', r.anchor, r.idx, badge, r.loc))
-        else
-            w(fmt('<a id="%s"></a>**%s @%s %s**\n', r.anchor, r.idx, badge, r.loc))
-        end
+    local function render_section(entries, prefix)
+        if #entries == 0 then return end
+        w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
-        if r.parent then
-            w(fmt("*↳ [@%s %s](#%s)*\n\n", TAG_SEC[r.parent.tag], r.parent.idx, r.parent.anchor))
-        end
-
-        if r.adm then
-            local first_text = true
-            for tline in gmatch(r.text, "[^\031]+") do
-                local tr = trim(tline)
-                if tr ~= "" then
-                    if first_text then
-                        w(fmt("> [!%s]\n> %s\n\n", r.adm, tr))
-                        first_text = false
-                    else
-                        w(tr .. "\n\n")
-                    end
-                end
-            end
-        else
-            local first_text = true
-            for tline in gmatch(r.text, "[^\031]+") do
-                local tr = trim(tline)
-                if tr ~= "" then
-                    if first_text then
-                        w(tr .. "\n\n")
-                        first_text = false
-                    else
-                        w(fmt("> %s\n\n", tr))
-                    end
-                end
-            end
-        end
-
-        if r.subj and r.subj ~= "" then
-            if r.lang and r.lang ~= "" then
-                w(fmt("```%s\n", r.lang))
+        for _, r in ipairs(entries) do
+            if r.parent then
+                w(fmt('<a id="%s"></a>**%s %s**\n', r.anchor, r.idx, r.loc))
+                w(fmt("*↳ [@%s %s](#%s)*\n\n", TAG_SEC[r.parent.tag], r.parent.idx, r.parent.anchor))
             else
+                w(fmt('### <a id="%s"></a>%s %s\n', r.anchor, r.idx, r.loc))
+            end
+
+            if r.adm then
+                local first_text = true
+                for tline in gmatch(r.text, "[^\031]+") do
+                    local tr = trim(tline)
+                    if tr ~= "" then
+                        if first_text then
+                            w(fmt("> [!%s]\n> %s\n\n", r.adm, tr))
+                            first_text = false
+                        else
+                            w(tr .. "\n\n")
+                        end
+                    end
+                end
+            else
+                local first_text = true
+                for tline in gmatch(r.text, "[^\031]+") do
+                    local tr = trim(tline)
+                    if tr ~= "" then
+                        if first_text then
+                            w(tr .. "\n\n")
+                            first_text = false
+                        else
+                            w(fmt("> %s\n\n", tr))
+                        end
+                    end
+                end
+            end
+
+            if r.subj and r.subj ~= "" then
+                if r.lang and r.lang ~= "" then
+                    w(fmt("```%s\n", r.lang))
+                else
+                    w("```\n")
+                end
+                for sline in gmatch(r.subj .. "\031", "(.-)\031") do
+                    w(sline .. "\n")
+                end
                 w("```\n")
             end
-            for sline in gmatch(r.subj .. "\031", "(.-)\031") do
-                w(sline .. "\n")
-            end
-            w("```\n")
+            w("\n")
         end
-        w("\n")
     end
+
+    render_section(grouped.CHK, "CHK")
+    render_section(grouped.DEF, "DEF")
+    render_section(grouped.RUN, "RUN")
+    render_section(grouped.ERR, "ERR")
 
     return concat(out)
 end
@@ -696,8 +703,9 @@ local function main()
         return
     end
 
-    -- @run Resolve parents and assign indices (single pass)
-    local mi = 0
+    -- @run Resolve parents, assign per-tag indices, group (single pass)
+    local mi = {CHK=0, DEF=0, RUN=0, ERR=0}
+    local grouped = {CHK={}, DEF={}, RUN={}, ERR={}}
     local scope = {}
     local scope_file = ""
     for _, r in ipairs(records) do
@@ -711,7 +719,10 @@ local function main()
             end
         end
         scope[r.indent] = r
-        if r.parent then
+        local t = r.tag
+        local g = grouped[t]
+        g[#g + 1] = r
+        if r.parent and r.parent.tag == t then
             r.parent._cc = (r.parent._cc or 0) + 1
             local cc = r.parent._cc
             if r.parent.depth == 0 then
@@ -722,16 +733,16 @@ local function main()
             r.anchor = fmt("%s-%d", r.parent.anchor, cc)
             r.depth = r.parent.depth + 1
         else
-            mi = mi + 1
-            r.idx = fmt("%d.", mi)
-            r.anchor = fmt("s-%d", mi)
+            mi[t] = mi[t] + 1
+            r.idx = fmt("%d.", mi[t])
+            r.anchor = fmt("%s-%d", TAG_SEC[t], mi[t])
             r.depth = 0
         end
     end
 
     -- @chk:10 Render and compare against existing output
     -- skip write if content is unchanged
-    local markdown = render_markdown()
+    local markdown = render_markdown(grouped)
     local ef = open(OUTPUT, "r")
     if ef then
         local existing = ef:read("*a")
