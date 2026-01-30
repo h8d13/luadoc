@@ -599,8 +599,7 @@ local function render_markdown()
         w(fmt("## %s (@%s)\n\n", TAG_TITLE[prefix], TAG_SEC[prefix]))
 
         for _, r in ipairs(entries) do
-            w(fmt('<a id="%s"></a>\n', r.anchor))
-            w(fmt("### %s %s\n", r.idx, r.loc))
+            w(fmt('### <a id="%s"></a>%s %s\n', r.anchor, r.idx, r.loc))
             if r.parent and r.parent.anchor then
                 w(fmt("*↳ [%s %s](#%s)*\n\n", r.parent.sec_title, r.parent.idx, r.parent.anchor))
             end
