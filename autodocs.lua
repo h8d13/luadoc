@@ -94,7 +94,7 @@ local function has_tag(line)
            find(line, "@run", 1, true) or find(line, "@err", 1, true)
 end
 
--- @chk:7 Classify a tagged line into `SET`, `ASS`, `CAL`, or `RAI`
+-- @chk:7 Classify a tagged line into `DEF`, `CHK`, `RUN`, or `ERR`
 local function get_tag(line)
     if     find(line, "@def", 1, true) then return "DEF"
     elseif find(line, "@chk", 1, true) then return "CHK"

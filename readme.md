@@ -20,7 +20,7 @@ end
 ```
 
 ### `/home/hadean/Desktop/Bin/autodocs.lua:97`
-Classify a tagged line into `SET`, `ASS`, `CAL`, or `RAI`
+Classify a tagged line into `DEF`, `CHK`, `RUN`, or `ERR`
 
 ```lua
 local function get_tag(line)
